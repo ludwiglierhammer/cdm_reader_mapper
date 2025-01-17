@@ -201,6 +201,25 @@ class DataBundle:
             setattr(self, f"_{name}", data)
         return self
 
+    @property
+    def empty(self):
+        """
+        Indicator whether :py:attr:`data` is empty.
+
+        True if ``data`` is entirely empty (no items), meaning any of the
+        axes are of length 0.
+
+        Returns
+        -------
+        bool
+            If ``data`` is empty, return True, if not return False.
+
+        See Also
+        --------
+        pandas.DataFrame.empty : Indicator whether Series/DataFrame is empty.
+        """
+        return len(self.data.index) == 0
+
     def stack_v(self, other, datasets=["data", "mask", "tables"], **kwargs):
         """Stack multiple :py:class:`cdm_reader_mapper.DataBundle`'s vertically.
 
