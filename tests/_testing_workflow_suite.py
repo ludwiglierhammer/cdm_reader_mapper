@@ -45,8 +45,8 @@ def _testing_suite(
     db_res = read_data(
         f"data-{imodel}.csv", mask=f"mask-{imodel}.csv", info=f"info-{imodel}.json"
     )
-    data_res = db_res.data.copy()
-    mask_res = db_res.mask.copy()
+    data_res = db_res.data.compute()
+    mask_res = db_res.mask.compute()
 
     expected_data = getattr(result_data, exp)
     result_data_file = expected_data["data"]
@@ -59,8 +59,8 @@ def _testing_suite(
         info=expected_data["info"],
         col_subset=data_res.columns,
     )
-    data_exp = db_exp.data.copy()
-    mask_exp = db_exp.mask.copy()
+    data_exp = db_exp.data.compute()
+    mask_exp = db_exp.mask.compute()
 
     data_exp = drop_rows(data_exp, drops)
     mask_exp = drop_rows(mask_exp, drops)
