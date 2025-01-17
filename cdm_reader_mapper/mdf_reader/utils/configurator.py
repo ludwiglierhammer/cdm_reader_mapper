@@ -5,6 +5,7 @@ from __future__ import annotations
 import ast
 import logging
 
+import dask.dataframe as dd
 import numpy as np
 import pandas as pd
 
@@ -28,9 +29,9 @@ class Configurator:
         self.valid = valid
         self.schema = schema
         self.str_line = ""
-        if isinstance(df, pd.Series) or isinstance(df, pd.DataFrame):
-            if len(df) > 0:
-                self.str_line = df.iloc[0]
+        if isinstance(df, dd.DataFrame):
+            if len(df.index) > 0:
+                self.str_line = df.head.iloc[0]
 
     def _add_field_length(self, index):
         if "field_length" in self.sections_dict.keys():
