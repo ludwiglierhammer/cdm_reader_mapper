@@ -114,6 +114,9 @@ class FileReader:
         return df.iloc[index].reset_index(drop=True)
 
     def _read_pandas(self, **kwargs):
+        if "encoding" in kwargs:
+            if kwargs["encoding"] is None:
+                del kwargs["encoding"]
         return dd.read_fwf(
             self.source,
             header=None,
