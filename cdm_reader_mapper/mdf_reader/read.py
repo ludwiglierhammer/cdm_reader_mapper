@@ -5,6 +5,7 @@ from __future__ import annotations
 import ast
 import logging
 
+import dask.dataframe as dd
 import pandas as pd
 
 from cdm_reader_mapper.common.json_dict import open_json_file
@@ -314,7 +315,7 @@ def read_data(
         return columns_
 
     def _read_csv(ifile, col_subset=None, **kwargs):
-        df = pd.read_csv(ifile, delimiter=",", **kwargs)
+        df = dd.read_csv(ifile, delimiter=",", **kwargs)
         df.columns = _update_column_labels(df.columns)
         if col_subset is not None:
             df = df[col_subset]

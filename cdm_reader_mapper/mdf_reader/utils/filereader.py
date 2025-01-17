@@ -6,6 +6,7 @@ import logging
 import os
 from copy import deepcopy
 
+import dask.dataframe as dd
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -113,7 +114,7 @@ class FileReader:
         return df.iloc[index].reset_index(drop=True)
 
     def _read_pandas(self, **kwargs):
-        return pd.read_fwf(
+        return dd.read_fwf(
             self.source,
             header=None,
             quotechar="\0",
