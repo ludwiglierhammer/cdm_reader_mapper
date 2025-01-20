@@ -5,13 +5,20 @@ from __future__ import annotations
 import ast
 import logging
 
-import dask.dataframe as dd
 import numpy as np
 import pandas as pd
 
 from .. import properties
 from . import converters, decoders
 from .utilities import convert_dtypes
+
+
+def _concat(a, b):
+    if isinstance(a, str):
+        a = (a,)
+    if isinstance(b, str):
+        b = (b,)
+    return a + b
 
 
 class Configurator:
@@ -29,9 +36,9 @@ class Configurator:
         self.valid = valid
         self.schema = schema
         self.str_line = ""
-        if isinstance(df, dd.DataFrame):
+        if isinstance(df, (pd.DataFrame, pd.Series)):
             if len(df.index) > 0:
-                self.str_line = df.head.iloc[0]
+                self.str_line = df.iloc[0]
 
     def _add_field_length(self, index):
         if "field_length" in self.sections_dict.keys():
@@ -203,11 +210,11 @@ class Configurator:
 
     def open_pandas(self):
         """Open TextParser to pd.DataSeries."""
-        missing_values = []
         self.delimiter = None
         i = 0
         j = 0
-        data_dict = {}
+        data_dict_df = {}
+        data_dict_mv = {}
         for order in self.orders:
             self.order = order
             header = self.schema["sections"][order]["header"]
@@ -218,7 +225,10 @@ class Configurator:
             self.delimiter_format = header.get("format")
             disable_read = header.get("disable_read")
             if disable_read is True:
-                data_dict[order] = self.str_line[i : properties.MAX_FULL_REPORT_WIDTH]
+                data_dict_df[order] = self.str_line[
+                    i : properties.MAX_FULL_REPORT_WIDTH
+                ]
+                data_dict_mv[order] = True
                 continue
             sections = self.schema["sections"][order]["elements"]
             k = i
@@ -241,21 +251,27 @@ class Configurator:
                 j, k = self._adjust_right_borders(j, k)
 
                 if ignore is not True:
-                    data_dict[index] = self.str_line[i:j]
+                    data_dict_df[index] = self.str_line[i:j]
 
-                    if not data_dict[index].strip():
-                        data_dict[index] = None
-                    if data_dict[index] == na_value:
-                        data_dict[index] = None
+                    if not data_dict_df[index].strip():
+                        data_dict_df[index] = None
+                    if data_dict_df[index] == na_value:
+                        data_dict_df[index] = None
 
-                if i == j and self.missing is True:
-                    missing_values.append(index)
+                    if i == j and self.missing is True:
+                        data_dict_mv[index] = True
+                    else:
+                        data_dict_mv[index] = False
 
                 i = j
 
-        df = pd.Series(data_dict)
-        df["missing_values"] = missing_values
-        return df
+        df_columns = [_concat("df", k) for k in data_dict_df.keys()]
+        mv_columns = [_concat("mv", k) for k in data_dict_df.keys()]
+        df = pd.Series(data_dict_df)
+        mv = pd.Series(data_dict_mv)
+        df.index = df_columns
+        mv.index = mv_columns
+        return pd.concat([df, mv])
 
     def open_netcdf(self):
         """Open netCDF to pd.Series."""
@@ -266,7 +282,7 @@ class Configurator:
                 series = series.str.strip().replace("", None)
             return series
 
-        missing_values = []
+        data_dict_mv = {}
         attrs = {}
         renames = {}
         disables = []
@@ -276,6 +292,7 @@ class Configurator:
             disable_read = header.get("disable_read")
             if disable_read is True:
                 disables.append(order)
+                data_dict_mv[order] = True
                 continue
             sections = self.schema["sections"][order]["elements"]
             for section in sections.keys():
@@ -284,6 +301,7 @@ class Configurator:
                 ignore = self._get_ignore()
                 if ignore is True:
                     continue
+                data_dict_mv[index] = False
                 if section in self.df.data_vars:
                     renames[section] = index
                 elif section in self.df.dims:
@@ -291,7 +309,7 @@ class Configurator:
                 elif section in self.df.attrs:
                     attrs[index] = self.df.attrs[index]
                 else:
-                    missing_values.append(index)
+                    data_dict_mv[index] = True
 
         df = self.df[renames.keys()].to_dataframe().reset_index()
         attrs = {k: v.replace("\n", "; ") for k, v in attrs.items()}
@@ -300,5 +318,14 @@ class Configurator:
         for column in disables:
             df[column] = np.nan
         df = df.apply(lambda x: replace_empty_strings(x))
-        df["missing_values"] = [missing_values] * len(df)
-        return df
+        mv = pd.DataFrame(data_dict_mv, index=df.index)
+        print("1", mv[("dimensions", "N_TIME")])
+        # exit()
+        df_columns = [_concat("df", k) for k in df.columns]
+        mv_columns = [_concat("mv", k) for k in mv.columns]
+        df.columns = df_columns
+        mv.columns = mv_columns
+        print("2", mv[("mv", "dimensions", "N_TIME")])
+        test = pd.concat([df, mv], axis=1)
+        print("3", test[("mv", "dimensions", "N_TIME")])
+        return pd.concat([df, mv], axis=1)

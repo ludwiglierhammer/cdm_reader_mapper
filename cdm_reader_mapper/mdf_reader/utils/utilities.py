@@ -5,8 +5,6 @@ from __future__ import annotations
 import logging
 import os
 
-import pandas as pd
-
 
 def convert_dtypes(dtypes):
     """DOCUMENTATION."""
@@ -72,20 +70,6 @@ def convert_entries(series, converter_func, **kwargs):
 def decode_entries(series, decoder_func):
     """DOCUMENTATION."""
     return decoder_func(series)
-
-
-def set_missing_values(df, ref):
-    """DOCUMENTATION."""
-    explode_ = df.explode("missing_values")
-    explode_["index"] = explode_.index
-    explode_["values"] = True
-    pivots_ = explode_.pivot_table(
-        columns="missing_values",
-        index="index",
-        values="values",
-    )
-    missing_values = pd.DataFrame(data=pivots_, columns=ref.columns, index=ref.index)
-    return missing_values.notna()
 
 
 def create_mask(df, isna, missing_values=[]):

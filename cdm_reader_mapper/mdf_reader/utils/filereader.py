@@ -6,7 +6,6 @@ import logging
 import os
 from copy import deepcopy
 
-import dask.dataframe as dd
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -15,13 +14,7 @@ from .. import properties
 from ..schemas import schemas
 from ..validate import validate
 from .configurator import Configurator
-from .utilities import (
-    convert_entries,
-    create_mask,
-    decode_entries,
-    set_missing_values,
-    validate_path,
-)
+from .utilities import convert_entries, create_mask, decode_entries, validate_path
 
 
 class FileReader:
@@ -117,7 +110,7 @@ class FileReader:
         if "encoding" in kwargs:
             if kwargs["encoding"] is None:
                 del kwargs["encoding"]
-        return dd.read_fwf(
+        return pd.read_fwf(
             self.source,
             header=None,
             quotechar="\0",
@@ -139,27 +132,36 @@ class FileReader:
         valid,
         open_with,
     ):
+        def _col(col):
+            col_ = col[1:]
+            if len(col_) < 2:
+                return col_[0]
+            return col_
+
         if open_with == "pandas":
-            df = TextParser.apply(
+            df_total = TextParser.apply(
                 lambda x: Configurator(
                     df=x, schema=self.schema, order=order, valid=valid
                 ).open_pandas(),
                 axis=1,
             )
         elif open_with == "netcdf":
-            df = Configurator(
+            df_total = Configurator(
                 df=TextParser, schema=self.schema, order=order, valid=valid
             ).open_netcdf()
         else:
             raise ValueError("open_with has to be one of ['pandas', 'netcdf']")
 
-        missing_values_ = df["missing_values"]
-        del df["missing_values"]
-        df = self._select_years(df)
-        missing_values = set_missing_values(pd.DataFrame(missing_values_), df)
+        df_columns = [col for col in df_total.columns if "df" in col]
+        mv_columns = [col for col in df_total.columns if "mv" in col]
+        self.missing_values = df_total[mv_columns]
+        self.missing_values.columns = [_col(col) for col in mv_columns]
+        df = df_total[df_columns]
+        df.columns = [_col(col) for col in df_columns]
         self.columns = df.columns
+        df = self._select_years(df)
         df = df.where(df.notnull(), np.nan)
-        return df, missing_values
+        return df
 
     def get_configurations(self, order, valid):
         """DOCUMENTATION."""
@@ -229,7 +231,5 @@ class FileReader:
         else:
             raise ValueError("open_with has to be one of ['pandas', 'netcdf']")
 
-        df, self.missing_values = self._read_sections(
-            TextParser, order, valid, open_with=open_with
-        )
+        df = self._read_sections(TextParser, order, valid, open_with=open_with)
         return df, df.isna()
