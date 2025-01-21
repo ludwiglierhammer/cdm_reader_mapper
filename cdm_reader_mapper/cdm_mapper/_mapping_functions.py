@@ -220,7 +220,6 @@ class mapping_functions:
         date: datetime obj
         """
         df = df["core"].dropna(how="any")
-        print(df)
         date_format = "%Y-%m-%d-%H-%M"
 
         df_dates = df.iloc[:, 0:3].astype(str)
