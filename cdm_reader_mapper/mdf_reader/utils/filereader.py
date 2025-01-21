@@ -139,26 +139,22 @@ class FileReader:
             return col_
 
         if open_with == "pandas":
-            df_total = TextParser.apply(
+            df = TextParser.apply(
                 lambda x: Configurator(
                     df=x, schema=self.schema, order=order, valid=valid
                 ).open_pandas(),
                 axis=1,
             )
         elif open_with == "netcdf":
-            df_total = Configurator(
+            df = Configurator(
                 df=TextParser, schema=self.schema, order=order, valid=valid
             ).open_netcdf()
         else:
             raise ValueError("open_with has to be one of ['pandas', 'netcdf']")
 
-        df_columns = [col for col in df_total.columns if "df" in col]
-        mv_columns = [col for col in df_total.columns if "mv" in col]
-        self.missing_values = df_total[mv_columns]
-        self.missing_values.columns = [_col(col) for col in mv_columns]
-        df = df_total[df_columns]
-        df.columns = [_col(col) for col in df_columns]
         self.columns = df.columns
+        self.missing_values = df == "MISSING_VALUE"
+        df[self.missing_values] = None
         df = self._select_years(df)
         df = df.where(df.notnull(), np.nan)
         return df

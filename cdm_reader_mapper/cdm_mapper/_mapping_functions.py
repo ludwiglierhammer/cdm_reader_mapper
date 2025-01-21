@@ -219,7 +219,8 @@ class mapping_functions:
         -------
         date: datetime obj
         """
-        df = df.dropna(how="any")
+        df = df["core"].dropna(how="any")
+        print(df)
         date_format = "%Y-%m-%d-%H-%M"
 
         df_dates = df.iloc[:, 0:3].astype(str)
@@ -228,9 +229,9 @@ class mapping_functions:
         df_coords = df.iloc[:, 3:5].astype(float)
 
         # Convert long to -180 to 180 for time zone finding
-        df_coords["lon_converted"] = coord_360_to_180i(df_coords[("core", "LON")])
+        df_coords["lon_converted"] = coord_360_to_180i(df_coords["LON"])
         time_zone = df_coords.swifter.apply(
-            lambda x: time_zone_i(x[("core", "LAT")], x["lon_converted"]),
+            lambda x: time_zone_i(x["LAT"], x["lon_converted"]),
             axis=1,
         )
 
