@@ -132,12 +132,6 @@ class FileReader:
         valid,
         open_with,
     ):
-        def _col(col):
-            col_ = col[1:]
-            if len(col_) < 2:
-                return col_[0]
-            return col_
-
         if open_with == "pandas":
             df = TextParser.apply(
                 lambda x: Configurator(
@@ -156,8 +150,7 @@ class FileReader:
         self.missing_values = df == properties.MISSING_VALUE
         df[self.missing_values] = None
         df = self._select_years(df)
-        df = df.where(df.notnull(), np.nan)
-        return df
+        return df.where(df.notnull(), np.nan)
 
     def get_configurations(self, order, valid):
         """DOCUMENTATION."""
