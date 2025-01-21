@@ -72,14 +72,13 @@ def decode_entries(series, decoder_func):
     return decoder_func(series)
 
 
-def create_mask(df, isna, missing_values=[]):
+def create_mask(df, isna, missing_values):
     """DOCUMENTATION."""
     if isna is None:
         isna = df.isna()
     valid = df.notna()
     mask = isna | valid
-    if len(missing_values) > 0:
-        mask[missing_values] = False
+    mask[missing_values] = False
     return mask
 
 
