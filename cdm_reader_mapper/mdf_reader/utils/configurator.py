@@ -13,14 +13,6 @@ from . import converters, decoders
 from .utilities import convert_dtypes
 
 
-def _concat(a, b):
-    if isinstance(a, str):
-        a = (a,)
-    if isinstance(b, str):
-        b = (b,)
-    return a + b
-
-
 class Configurator:
     """Class for configuring MDF reader information."""
 
