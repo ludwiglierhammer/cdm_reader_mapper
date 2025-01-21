@@ -227,5 +227,4 @@ class FileReader:
         else:
             raise ValueError("open_with has to be one of ['pandas', 'netcdf']")
 
-        df = self._read_sections(TextParser, order, valid, open_with=open_with)
-        return df, df.isna()
+        return self._read_sections(TextParser, order, valid, open_with=open_with)

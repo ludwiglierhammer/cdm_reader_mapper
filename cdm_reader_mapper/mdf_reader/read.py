@@ -149,12 +149,13 @@ class MDFFileReader(FileReader):
         # a list with a single dataframe
         logging.info("Getting data string from source...")
         self.configurations = self.get_configurations(read_sections_list, sections)
-        self.data, self.isna = self.open_data(
+        self.data = self.open_data(
             read_sections_list,
             sections,
             # INFO: Set default as "pandas" to account for custom schema
             open_with=properties.open_file.get(self.imodel, "pandas"),
         )
+        self.isna = self.data.isna()
 
         # 2.3. Extract, read and validate data in same loop
         logging.info("Extracting and reading sections")
