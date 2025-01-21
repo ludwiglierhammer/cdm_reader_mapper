@@ -255,7 +255,7 @@ class Configurator:
                         data_dict[index] = None
 
                     if i == j and self.missing is True:
-                        data_dict[index] = "MISSING_VALUE"
+                        data_dict[index] = properties.MISSING_VALUE
                 i = j
 
         return pd.Series(data_dict)
@@ -303,5 +303,5 @@ class Configurator:
         for column in disables:
             df[column] = np.nan
         df = df.apply(lambda x: replace_empty_strings(x))
-        df[missing_values] = "MISSING_VALUES"
+        df[missing_values] = properties.MISSING_VALUE
         return df

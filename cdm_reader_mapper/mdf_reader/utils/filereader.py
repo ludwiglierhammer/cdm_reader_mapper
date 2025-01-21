@@ -153,7 +153,7 @@ class FileReader:
             raise ValueError("open_with has to be one of ['pandas', 'netcdf']")
 
         self.columns = df.columns
-        self.missing_values = df == "MISSING_VALUE"
+        self.missing_values = df == properties.MISSING_VALUE
         df[self.missing_values] = None
         df = self._select_years(df)
         df = df.where(df.notnull(), np.nan)

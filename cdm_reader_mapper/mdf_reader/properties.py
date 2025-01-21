@@ -37,3 +37,5 @@ data_type_conversion_args["datetime"] = ["datetime_format"]
 dummy_level = "_SECTION_"
 # Length of reports in initial read
 MAX_FULL_REPORT_WIDTH = 100000
+# Name of missing values
+MISSING_VALUE = "_MV_"
