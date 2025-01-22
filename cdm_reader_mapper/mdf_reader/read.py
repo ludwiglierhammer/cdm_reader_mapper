@@ -5,6 +5,7 @@ from __future__ import annotations
 import ast
 import logging
 
+import dask.dataframe as dd
 import pandas as pd
 
 from cdm_reader_mapper.common.json_dict import open_json_file
@@ -148,12 +149,13 @@ class MDFFileReader(FileReader):
         # a list with a single dataframe
         logging.info("Getting data string from source...")
         self.configurations = self.get_configurations(read_sections_list, sections)
-        self.data, self.isna = self.open_data(
+        self.data = self.open_data(
             read_sections_list,
             sections,
             # INFO: Set default as "pandas" to account for custom schema
             open_with=properties.open_file.get(self.imodel, "pandas"),
         )
+        self.isna = self.data.isna()
 
         # 2.3. Extract, read and validate data in same loop
         logging.info("Extracting and reading sections")
@@ -314,7 +316,7 @@ def read_data(
         return columns_
 
     def _read_csv(ifile, col_subset=None, **kwargs):
-        df = pd.read_csv(ifile, delimiter=",", **kwargs)
+        df = dd.read_csv(ifile, delimiter=",", **kwargs)
         df.columns = _update_column_labels(df.columns)
         if col_subset is not None:
             df = df[col_subset]

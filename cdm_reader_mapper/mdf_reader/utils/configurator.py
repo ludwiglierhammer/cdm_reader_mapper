@@ -28,8 +28,8 @@ class Configurator:
         self.valid = valid
         self.schema = schema
         self.str_line = ""
-        if isinstance(df, pd.Series) or isinstance(df, pd.DataFrame):
-            if len(df) > 0:
+        if isinstance(df, (pd.DataFrame, pd.Series)):
+            if len(df.index) > 0:
                 self.str_line = df.iloc[0]
 
     def _add_field_length(self, index):
@@ -202,7 +202,6 @@ class Configurator:
 
     def open_pandas(self):
         """Open TextParser to pd.DataSeries."""
-        missing_values = []
         self.delimiter = None
         i = 0
         j = 0
@@ -247,28 +246,19 @@ class Configurator:
                     if data_dict[index] == na_value:
                         data_dict[index] = None
 
-                if i == j and self.missing is True:
-                    missing_values.append(index)
-
+                    if i == j and self.missing is True:
+                        data_dict[index] = properties.MISSING_VALUE
                 i = j
 
-        df = pd.Series(data_dict)
-        df["missing_values"] = missing_values
-        return df
+        return pd.Series(data_dict)
 
     def open_netcdf(self):
         """Open netCDF to pd.Series."""
 
-        def replace_empty_strings(series):
-            if series.dtype == "object":
-                series = series.str.decode("utf-8")
-                series = series.str.strip().replace("", None)
-            return series
-
-        missing_values = []
         attrs = {}
         renames = {}
         disables = []
+        missing_values = []
         for order in self.orders:
             self.order = order
             header = self.schema["sections"][order]["header"]
@@ -290,14 +280,14 @@ class Configurator:
                 elif section in self.df.attrs:
                     attrs[index] = self.df.attrs[index]
                 else:
-                    missing_values.append(index)
+                    missing_values.append(section)
 
-        df = self.df[renames.keys()].to_dataframe().reset_index()
+        if missing_values:
+            self.df[missing_values] = properties.MISSING_VALUE
+        df = self.df[renames.keys()].to_dask_dataframe().reset_index()
         attrs = {k: v.replace("\n", "; ") for k, v in attrs.items()}
         df = df.rename(columns=renames)
         df = df.assign(**attrs)
         for column in disables:
             df[column] = np.nan
-        df = df.apply(lambda x: replace_empty_strings(x))
-        df["missing_values"] = [missing_values] * len(df)
-        return df
+        return df.replace("\\s+", None, regex=True)

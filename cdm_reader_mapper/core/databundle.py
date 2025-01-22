@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 
-import pandas as pd
+import dask.dataframe as dd
 
 from cdm_reader_mapper.cdm_mapper.mapper import map_model
 from cdm_reader_mapper.cdm_mapper.table_writer import write_tables
@@ -201,6 +201,25 @@ class DataBundle:
             setattr(self, f"_{name}", data)
         return self
 
+    @property
+    def empty(self):
+        """
+        Indicator whether :py:attr:`data` is empty.
+
+        True if ``data`` is entirely empty (no items), meaning any of the
+        axes are of length 0.
+
+        Returns
+        -------
+        bool
+            If ``data`` is empty, return True, if not return False.
+
+        See Also
+        --------
+        pandas.DataFrame.empty : Indicator whether Series/DataFrame is empty.
+        """
+        return len(self.data.index) == 0
+
     def stack_v(self, other, datasets=["data", "mask", "tables"], **kwargs):
         """Stack multiple :py:class:`cdm_reader_mapper.DataBundle`'s vertically.
 
@@ -230,15 +249,15 @@ class DataBundle:
             datasets = [datasets]
         for data in datasets:
             data = f"_{data}"
-            self_data = getattr(self, data) if hasattr(self, data) else pd.DataFrame
+            self_data = getattr(self, data) if hasattr(self, data) else dd.DataFrame
             to_concat = [
                 getattr(concat, data) for concat in other if hasattr(concat, data)
             ]
             if not to_concat:
                 continue
-            if not self_data.empty:
+            if len(self_data.index) > 0:
                 to_concat = [self_data] + to_concat
-            self_data = pd.concat(to_concat, **kwargs)
+            self_data = dd.concat(to_concat, **kwargs)
             setattr(self, data, self_data.reset_index(drop=True))
         return self
 
@@ -269,7 +288,7 @@ class DataBundle:
             other = [other]
         for data in datasets:
             data = f"_{data}"
-            self_data = getattr(self, data) if hasattr(self, data) else pd.DataFrame()
+            self_data = getattr(self, data) if hasattr(self, data) else dd.DataFrame()
             to_concat = [
                 getattr(concat, data) for concat in other if hasattr(concat, data)
             ]
@@ -277,7 +296,7 @@ class DataBundle:
                 continue
             if not self_data.empty:
                 to_concat = [self_data] + to_concat
-            self_data = pd.concat(to_concat, axis=1, join="outer")
+            self_data = dd.concat(to_concat, axis=1, join="outer")
             setattr(self, data, self_data.reset_index(drop=True))
         return self
 

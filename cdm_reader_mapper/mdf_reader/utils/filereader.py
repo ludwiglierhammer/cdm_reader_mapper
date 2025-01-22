@@ -14,13 +14,7 @@ from .. import properties
 from ..schemas import schemas
 from ..validate import validate
 from .configurator import Configurator
-from .utilities import (
-    convert_entries,
-    create_mask,
-    decode_entries,
-    set_missing_values,
-    validate_path,
-)
+from .utilities import convert_entries, create_mask, decode_entries, validate_path
 
 
 class FileReader:
@@ -113,6 +107,9 @@ class FileReader:
         return df.iloc[index].reset_index(drop=True)
 
     def _read_pandas(self, **kwargs):
+        if "encoding" in kwargs:
+            if kwargs["encoding"] is None:
+                del kwargs["encoding"]
         return pd.read_fwf(
             self.source,
             header=None,
@@ -149,13 +146,11 @@ class FileReader:
         else:
             raise ValueError("open_with has to be one of ['pandas', 'netcdf']")
 
-        missing_values_ = df["missing_values"]
-        del df["missing_values"]
-        df = self._select_years(df)
-        missing_values = set_missing_values(pd.DataFrame(missing_values_), df)
         self.columns = df.columns
-        df = df.where(df.notnull(), np.nan)
-        return df, missing_values
+        self.missing_values = df == properties.MISSING_VALUE
+        df[self.missing_values] = None
+        df = self._select_years(df)
+        return df.where(df.notnull(), np.nan)
 
     def get_configurations(self, order, valid):
         """DOCUMENTATION."""
@@ -225,7 +220,4 @@ class FileReader:
         else:
             raise ValueError("open_with has to be one of ['pandas', 'netcdf']")
 
-        df, self.missing_values = self._read_sections(
-            TextParser, order, valid, open_with=open_with
-        )
-        return df, df.isna()
+        return self._read_sections(TextParser, order, valid, open_with=open_with)

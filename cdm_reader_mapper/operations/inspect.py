@@ -31,7 +31,7 @@ def get_length(data):
     int
         Total row count
     """
-    return len(data)
+    return len(data.index)
 
 
 def count_by_cat(data, columns=None):
