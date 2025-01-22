@@ -255,12 +255,6 @@ class Configurator:
     def open_netcdf(self):
         """Open netCDF to pd.Series."""
 
-        def replace_empty_strings(series):
-            if series.dtype == "object":
-                series = series.str.decode("utf-8")
-                series = series.str.strip().replace("", None)
-            return series
-
         attrs = {}
         renames = {}
         disables = []
@@ -286,14 +280,14 @@ class Configurator:
                 elif section in self.df.attrs:
                     attrs[index] = self.df.attrs[index]
                 else:
-                    missing_values.append(index)
+                    missing_values.append(section)
 
-        df = self.df[renames.keys()].to_dataframe().reset_index()
+        if missing_values:
+            self.df[missing_values] = properties.MISSING_VALUE
+        df = self.df[renames.keys()].to_dask_dataframe().reset_index()
         attrs = {k: v.replace("\n", "; ") for k, v in attrs.items()}
         df = df.rename(columns=renames)
         df = df.assign(**attrs)
         for column in disables:
             df[column] = np.nan
-        df = df.apply(lambda x: replace_empty_strings(x))
-        df[missing_values] = properties.MISSING_VALUE
-        return df
+        return df.replace("\\s+", None, regex=True)
