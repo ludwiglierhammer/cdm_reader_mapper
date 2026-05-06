@@ -28,9 +28,9 @@ from .validators import validate
 
 
 try:
-    import netcdf4  # noqa: F401
+    import netCDF4  # noqa: F401
 except ImportError as err:
-    raise ImportError("'netcdf4' is required for this functionality.") from err
+    raise ImportError("'netCDF4' is required for this functionality.") from err
 
 try:
     import h5netcdf  # noqa: F401
