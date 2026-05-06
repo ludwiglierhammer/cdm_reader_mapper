@@ -1,9 +1,4 @@
-.. module:: cdm_reader_mapper
-
-.. mdf_reader documentation master file, created by
-   sphinx-quickstart on Fri Apr 16 14:18:24 2021.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root ``toctree`` directive.
+.. mdf_reader documentation master file
 
 Marine ``cdm_reader_mapper`` toolbox documentation
 --------------------------------------------------
@@ -51,6 +46,7 @@ In addition, the **cdm_reader_mapper.DataBundle** object has several main method
 
    About <readme>
    tool-set-up
+   usage
    tool-overview-reader
    tool-overview-mapper
    tool-overview-databundle
@@ -64,10 +60,26 @@ In addition, the **cdm_reader_mapper.DataBundle** object has several main method
    example_notebooks/CLIWOC_datamodel.ipynb
    example_notebooks/CDM_mapper_example_deck704.ipynb
    contributing
+   releasing
    authors
-   api
-   changes
+   changelog
 
+.. toctree::
+   :maxdepth: 2
+   :caption: UserAPI
+
+   api
+
+.. toctree::
+   :maxdepth: 1
+   :caption: All Modules
+
+   apidoc/modules
+
+.. toctree::
+   :caption: GitHub repository
+
+   glamod/CDM-Reader-Mapper-Toolbox <https://github.com/glamod/cdm_reader_mapper>
 
 About
 -----

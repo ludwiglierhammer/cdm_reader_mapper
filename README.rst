@@ -175,7 +175,7 @@ This package was created with Cookiecutter_ and the `Ouranosinc/cookiecutter-pyp
 
 .. _Apache License 2.0: https://opensource.org/license/apache-2-0/
 
-.. _audreyfeldroy/cookiecutter-pypackage: https://github.com/audreyfeldroy/cookiecutter-pypackage/
+.. _Ouranosinc/cookiecutter-pypackage: https://github.com/audreyfeldroy/cookiecutter-pypackage/
 
 .. _C3S: https://climate.copernicus.eu/
 

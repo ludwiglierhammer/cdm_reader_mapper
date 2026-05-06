@@ -58,6 +58,8 @@
 
 .. _US Maury: https://icoads.noaa.gov/maury.html
 
+.. _uv: https://docs.astral.sh/uv/
+
 .. _xarray: https://docs.xarray.dev/en/stable/
 
 .. |logo_c3s| image:: _static/images/logos_c3s/logo_c3s-392x154.png

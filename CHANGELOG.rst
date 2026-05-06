@@ -55,7 +55,7 @@ Breaking changes
     * Update and rename GDAC variable names in `tables/gdac`.
     * Fix `gdac_latitude` and `gdac_longitude` (`utils/mapping_functions.py`) not being used in observations.json
 
-* `mdf_reader`/`cdm_mapper`: use parquet as default instead of csv when reading and writing data from/to disk (:pul:`401`)
+* `mdf_reader`/`cdm_mapper`: use parquet as default instead of csv when reading and writing data from/to disk (:pull:`401`)
 * `cdm_mapper`: do not convert data types to strings while mapping to the CDM (:issue:`398`, :pull:`401`)
 * `cdm_mapper`: set default decimal_places from `0` to `1` for `location_accuracy`, `report_time_accuracy`, `station_speed` and `station_course` (:pull:`401`)
 
@@ -164,7 +164,7 @@ Internal changes
 * ``cdm_reader_mapper.cdm_mapper``: introduce some helper functions (:pull:`324`)
 * add more unit tests (:issue:`311`, :pull:`324`)
 * ``cdm_reader_mapper.cdm_mapper``: split `map_and_convert` into multiple helper functions (:issue:`333`, :pull:`343`)
-* exclude tests/*.py from `pre-commit` codespell hook (:pull:`345`)
+* exclude python files in tests from `pre-commit` codespell hook (:pull:`345`)
 * replace many `os` functions with `pathlib.Path` (:pull:`345`)
 * re-work `mdf_reader` (:issue:`334`, :pull:`345`)
 
@@ -218,7 +218,7 @@ Internal changes
 ^^^^^^^^^^^^^^^^
 * ``tests``: create test data result hidden directory (:pull:`291`)
 * ``cdm_reader_mapper.mdf_reader``: update and tidy-up ICOADS mapping tables (:pull:`281`)
-* timezonefinde is pinned below v7.0.0 (:pull:``281)
+* timezonefinde is pinned below v7.0.0 (:pull:`281`)
 
 Bug fixes
 ^^^^^^^^^
@@ -346,7 +346,7 @@ Breaking changes
 * import ``read`` function from ``mdf_reader.read`` as ``read_mdf`` (:pull:`188`)
 * ``read_mdf``: returning ``DataBundle`` object (:pull:`188`)
 * ``read_mdf``: remove parameter ``out_path`` to dump attribute information on disk (:pull:`201`)
-* move function ``open_code_table`` from ``common.json_dict`` to ``cdm_mapper.codes.codes`` (:pull:``221`)
+* move function ``open_code_table`` from ``common.json_dict`` to ``cdm_mapper.codes.codes`` (:pull:`221`)
 * ``operations`` to ``common`` (:pull:`224`)
 * ``cdm_mapper``: rename table_writer to writer and table_reader to reader (:pull:`224`)
 * ``mdf_reader``: rename write to writer and read to reader (:pull:`224`)

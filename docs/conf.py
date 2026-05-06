@@ -1,5 +1,5 @@
 #
-# marine_quality_control documentation build configuration file, created by
+# CDM reader mapper documentation build configuration file, created by
 # sphinx-quickstart on Fri Jun  9 13:47:02 2017.
 #
 # This file is execfile()d with the current directory set to its
