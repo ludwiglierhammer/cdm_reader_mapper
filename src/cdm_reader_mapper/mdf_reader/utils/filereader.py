@@ -27,6 +27,22 @@ from .utilities import remove_boolean_values
 from .validators import validate
 
 
+try:
+    import netcdf4  # noqa: F401
+except ImportError as err:
+    raise ImportError("'netcdf4' is required for this functionality.") from err
+
+try:
+    import h5netcdf  # noqa: F401
+except ImportError as err:
+    raise ImportError("'h5netcdf' is required for this functionality.") from err
+
+try:
+    import dask  # noqa: F401
+except ImportError as err:
+    raise ImportError("'dask' is required for this functionality.") from err
+
+
 def _merge_kwargs(*dicts: Mapping[str, Any]) -> dict[str, Any]:
     r"""
     Merge multiple keyword-argument dictionarie.
