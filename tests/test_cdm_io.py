@@ -278,7 +278,7 @@ def test_write_data_raises(tmp_path, example_data):
 
 
 def test_write_data_empty(tmp_path, empty_data):
-    write_tables(empty_data, outdir=tmp_path)
+    write_tables(empty_data, out_dir=tmp_path)
 
 
 def test_write_data_parquet(tmp_path, example_data):

@@ -1,7 +1,7 @@
 """Common Data Model (CDM) DataBundle class."""
 
 from __future__ import annotations
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from typing import Any, Literal
 
 import pandas as pd
@@ -9,14 +9,15 @@ import pandas as pd
 from cdm_reader_mapper.cdm_mapper.mapper import map_model
 from cdm_reader_mapper.common import (
     count_by_cat,
+    get_length,
     replace_columns,
     split_by_boolean_false,
     split_by_boolean_true,
     split_by_column_entries,
     split_by_index,
 )
-from cdm_reader_mapper.common.iterators import is_valid_iterator
-from cdm_reader_mapper.duplicates.duplicates import duplicate_check
+from cdm_reader_mapper.common.iterators import ParquetStreamReader, is_valid_iterator
+from cdm_reader_mapper.duplicates.duplicates import DupDetect, duplicate_check
 from cdm_reader_mapper.metmetpy import (
     correct_datetime,
     correct_pt,
@@ -24,37 +25,58 @@ from cdm_reader_mapper.metmetpy import (
     validate_id,
 )
 
-from ._utilities import _DataBundle, _copy
+from ._utilities import (
+    SubscriptableMethod,
+    _copy,
+    _normalize_data_input,
+    _normalize_mask_input,
+    _validate_mode,
+    combine_attribute_values,
+    reader_method,
+)
 from .writer import write
 
 
-class DataBundle(_DataBundle):
+properties = {
+    "data",
+    "columns",
+    "dtypes",
+    "mask",
+    "imodel",
+    "mode",
+    "parse_dates",
+    "encoding",
+}
+
+
+class DataBundle:
     r"""
-    Class for manipulating the MDF data and mapping it to the CDM.
+    Container for tabular data and associated metadata.
+
+    This class wraps either an in-memory `pd.DataFrame` or a
+    `ParquetStreamReader` for chunked, disk-backed processing. It provides
+    a unified interface for accessing DataFrame-like attributes and methods,
+    transparently handling streaming data where required.
 
     Parameters
     ----------
-    \*args : Any
-        Positional arguments for initializing instance.
-    \**kwargs : Any
-        Keyword-arguments for initializing instance.
-
-    Attributes
-    ----------
-    data : pd.DataFrame or Iterable[pd.DataFrame], optional
-        MDF DataFrame.
-    columns : pd.Index, pd.MultiIndex or list, optional
-        Column labels of `data`
-    dtypes : pd.Series or dict, optional
-        Data types of `data`.
+    data : pandas.DataFrame or Iterable[pandas.DataFrame] or ParquetStreamReader, optional
+        Input data. If an iterable is provided, it is converted into a
+        `ParquetStreamReader` for streaming.
+    columns : pandas.Index or pandas.MultiIndex or list, optional
+        Column labels used when initializing empty data.
+    dtypes : pandas.Series or dict, optional
+        Data types for columns.
     parse_dates : list or bool, optional
-        Information how to parse dates on `data`
-    mask : pandas.DataFrame, optional
-        MDF validation mask
+        Instructions for parsing dates.
+    encoding : str, optional
+        Encoding associated with the data.
+    mask : pandas.DataFrame or Iterable[pandas.DataFrame] or ParquetStreamReader, optional
+        Boolean mask aligned with `data`. If not provided, an empty mask is created.
     imodel : str, optional
-        Name of the MFD/CDM data model.
-    mode : {data, tables}, default: data
-        Data mode.
+        Name of the input data model.
+    mode : {"data", "tables"}, default "data"
+        Data representation mode.
 
     Examples
     --------
@@ -78,18 +100,408 @@ class DataBundle(_DataBundle):
     >>> db = DataBundle(data=tables, mode="tables")
     """
 
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        r"""
-        Initialize a DataBundle instance.
+    def __init__(
+        self,
+        data: pd.DataFrame | Iterable[pd.DataFrame] | None = None,
+        columns: pd.Index | pd.MultiIndex | list[Any] | None = None,
+        dtypes: pd.Series | dict[str | tuple[str, str], Any] | None = None,
+        parse_dates: list[Any] | bool | None = None,
+        encoding: str | None = None,
+        mask: pd.DataFrame | Iterable[pd.DataFrame] | None = None,
+        imodel: str | None = None,
+        mode: Literal["data", "tables"] = "data",
+    ) -> None:
+        """
+        Initialization of a DataBundle instance.
 
         Parameters
         ----------
-        \*args : Any
-          Positional arguments for initializing instance.
-        \**kwargs : Any
-          Keyword-arguments for initializing instance.
+        data : pandas.DataFrame or Iterable[pandas.DataFrame] or ParquetStreamReader, optional
+            Input data. If an iterable is provided, it is converted into a
+            `ParquetStreamReader` for streaming.
+        columns : pandas.Index or pandas.MultiIndex or list, optional
+            Column labels used when initializing empty data.
+        dtypes : pandas.Series or dict, optional
+            Data types for columns.
+        parse_dates : list or bool, optional
+            Instructions for parsing dates.
+        encoding : str, optional
+            Encoding associated with the data.
+        mask : pandas.DataFrame or Iterable[pandas.DataFrame] or ParquetStreamReader, optional
+            Boolean mask aligned with `data`. If not provided, an empty mask is created.
+        imodel : str, optional
+            Name of the input data model.
+        mode : {"data", "tables"}, default "data"
+            Data representation mode.
+
+        Raises
+        ------
+        ValueError
+            If `mode` is invalid.
+        TypeError
+            If `data` and/or `mask` has an unsupported type.
         """
-        super().__init__(*args, **kwargs)
+        _validate_mode(mode)
+
+        data = _normalize_data_input(data, columns, dtypes)
+        mask = _normalize_mask_input(mask, data)
+
+        self._data: pd.DataFrame | ParquetStreamReader = data
+        self._columns = columns
+        self._dtypes = dtypes
+        self._parse_dates = parse_dates
+        self._encoding = encoding
+        self._mask: pd.DataFrame | ParquetStreamReader = mask
+        self._imodel = imodel
+        self._mode = mode
+        self.DupDetect: DupDetect | None = None
+
+    def __len__(self) -> int:
+        """
+        Length of :py:attr:`data`.
+
+        Returns
+        -------
+        int
+            Number of rows in the underlying data.
+
+        Raises
+        ------
+        TypeError
+             If the computed length is not an integer.
+        """
+        length = get_length(self._data)
+        if isinstance(length, int):
+            return length
+        raise TypeError(f"Length is not an integer: {length}, {type(length)}")
+
+    def __getattr__(self, attr: str) -> Any:
+        """
+        Apply attribute to :py:attr:`data` if attribute is not defined for :py:class:`~DataBundle` .
+
+        Parameters
+        ----------
+        attr : str
+            Name of the attribute.
+
+        Returns
+        -------
+        Any
+            Attribute value, callable wrapper, or computed result.
+
+        Raises
+        ------
+        AttributeError
+            If the attribute does not exist.
+        ValueError
+            If the data stream is empty.
+        TypeError
+            If the underlying data type is unsupported.
+        """
+        if attr.startswith("__") and attr.endswith("__"):
+            raise AttributeError(f"DataBundle object has no attribute {attr}.")
+
+        data = self._data
+
+        if isinstance(data, pd.DataFrame):
+            attr_func = getattr(data, attr)
+            if not callable(attr_func):
+                return attr_func
+            return SubscriptableMethod(attr_func)
+
+        if isinstance(data, ParquetStreamReader):
+            # This allows db.read(), db.close(), db.get_chunk() to work
+            if hasattr(data, attr):
+                return getattr(data, attr)
+
+            data = data.copy()
+
+            try:
+                first_chunk = data.get_chunk()
+            except (StopIteration, ValueError) as err:
+                raise ValueError("Cannot access attribute on empty data stream.") from err
+
+            if not hasattr(first_chunk, attr):
+                # Restore state before raising error
+                data.prepend(first_chunk)
+                raise AttributeError(f"DataFrame chunk has no attribute '{attr}'.")
+
+            attr_value = getattr(first_chunk, attr)
+
+            if callable(attr_value):
+                # METHOD CALL (e.g., .dropna(), .fillna())
+                # Put the chunk BACK so the reader_method sees the full stream.
+                data.prepend(first_chunk)
+
+                def wrapped_reader_method(*args: Any, **kwargs: Any) -> ParquetStreamReader | None:
+                    return reader_method(data, attr, *args, **kwargs)
+
+                return SubscriptableMethod(wrapped_reader_method)
+            else:
+                # PROPERTY ACCESS (e.g., .shape, .dtypes)
+                # DO NOT put the chunk back yet. Pass the 'first_value'
+                # and the 'data' iterator (which is now at chunk 2) to the combiner.
+                # The combiner will consume the rest.
+                return combine_attribute_values(attr_value, data, attr)
+
+        raise TypeError(f"'data' is {type(data)}, expected DataFrame or ParquetStreamReader.")
+
+    def __repr__(self) -> str:
+        """
+        Return a string representation for :py:attr:`data`.
+
+        Returns
+        -------
+        str
+            String representation for the underlying data.
+        """
+        return self._data.__repr__()
+
+    def __setitem__(self, item: Any, value: Any) -> None:
+        """
+        Make class support item assignment for :py:attr:`data`.
+
+        Parameters
+        ----------
+        item : Any
+            Column name or property key.
+        value : Any
+            Value to assign.
+        """
+        if isinstance(item, str) and item in properties:
+            setattr(self, item, value)
+        else:
+            self._data[item] = value
+
+    def __getitem__(self, item: Any) -> Any:
+        """
+        Make class subscriptable.
+
+        Parameters
+        ----------
+        item : Any
+            Key or column name.
+
+        Returns
+        -------
+        Any
+            Item `item` of underlying data.
+        """
+        if isinstance(item, str):
+            if hasattr(self, item):
+                return getattr(self, item)
+        return self._data.__getitem__(item)
+
+    def _return_property(self, property: str) -> Any:
+        """
+        Return an internal property if it exists.
+
+        Parameters
+        ----------
+        property : str
+            Name of the attribute.
+
+        Returns
+        -------
+        Any
+            Internal property `property`.
+        """
+        if hasattr(self, property):
+            return getattr(self, property)
+
+    @property
+    def data(self) -> pd.DataFrame | ParquetStreamReader:
+        """
+        Underlying MDF data.
+
+        Returns
+        -------
+        pd.DataFrame or ParquetStreamReader
+            Underlying MDf data.
+        """
+        return self._return_property("_data")
+
+    @data.setter
+    def data(self, value: pd.DataFrame | ParquetStreamReader) -> None:
+        """
+        Set the underlying MDF data.
+
+        Parameters
+        ----------
+        value : pandas.DataFrame or ParquetStreamReader
+            Value to be set.
+        """
+        self._data = value
+
+    @property
+    def columns(self) -> pd.Index | pd.MultiIndex:
+        """
+        Column labels of :py:attr:`data`.
+
+        Returns
+        -------
+        pd.Index or pd.MultiIndex
+            Column labels of the underlying MDf data.
+        """
+        return self._data.columns
+
+    @columns.setter
+    def columns(self, value: pd.Index | pd.MultiIndex | list[Any]) -> None:
+        """
+        Set column labels of the underlying MDF data.
+
+        Parameters
+        ----------
+        value : pandas.Index or pandas.MultiIndex or list
+            Value to be set.
+        """
+        self._columns = value
+
+    @property
+    def dtypes(self) -> pd.Series | dict[str, Any] | None:
+        """
+        Dictionary of data types on :py:attr:`data`.
+
+        Returns
+        -------
+        pd.Series or dict or None
+            Data types of underlying MDF data.
+        """
+        return self._return_property("_dtypes")
+
+    @property
+    def parse_dates(self) -> list[Any] | bool | None:
+        """
+        Information of how to parse dates in :py:attr:`data`.
+
+        Returns
+        -------
+        list or bool or None
+            Information of how to parse dates in underlying MDF data.
+
+        See Also
+        --------
+        :py:func:`pd.read_csv` : Read CSV file using pandas.
+        """
+        parse_dates_ = self._return_property("_parse_dates")
+        if parse_dates_ is None:
+            return None
+        if isinstance(parse_dates_, (list, bool)):
+            return parse_dates_
+        raise TypeError(f"parse_dates has type {type(parse_dates_)}; expected list[Any], bool, or None.")
+
+    @property
+    def encoding(self) -> str | None:
+        """
+        A string representing the encoding to use in the :py:attr:`data`.
+
+        Returns
+        -------
+        str or None
+            String representing the encoding to use in the underlying MDF data.
+
+        See Also
+        --------
+        :py:func:`pd.to_csv` : Write data with encoding to CSV file.
+        """
+        encoding_ = self._return_property("_encoding")
+        if encoding_ is None:
+            return None
+        if isinstance(encoding_, str):
+            return encoding_
+        raise TypeError(f"encoding has type {type(encoding_)}; expected str or None.")
+
+    @property
+    def mask(self) -> pd.DataFrame | ParquetStreamReader:
+        """
+        MDF validation mask.
+
+        Returns
+        -------
+        pd.DataFrame or ParquetStreamReader
+            Validation mask of the underlying MDF data.
+        """
+        return self._return_property("_mask")
+
+    @mask.setter
+    def mask(self, value: pd.DataFrame | ParquetStreamReader) -> None:
+        """
+        Set the validation mask of underlying MDF data.
+
+        Parameters
+        ----------
+        value : pd.DataFrame or ParquetStreamReader
+            Value to be set.
+        """
+        self._mask = value
+
+    @property
+    def imodel(self) -> str | None:
+        """
+        Name of the MDF/CDM input model.
+
+        Returns
+        -------
+        str or None
+            Name of the MDF/CDM input model if available.
+        """
+        imodel_ = self._return_property("_imodel")
+        if imodel_ is None:
+            return None
+        if isinstance(imodel_, str):
+            return imodel_
+        raise TypeError(f"imodel has type {type(imodel_)}; expected str or None.")
+
+    @imodel.setter
+    def imodel(self, value: str) -> None:
+        """
+        Set the data model name of underlying MDF data.
+
+        Parameters
+        ----------
+        value : str
+            Value to be set.
+        """
+        self._imodel = value
+
+    @property
+    def mode(self) -> str:
+        """
+        Data mode.
+
+        Returns
+        -------
+        str
+            Current data mode.
+
+        Raises
+        ------
+        TypeError
+            If mode of the underlying data is not a string.
+        """
+        mode_ = self._return_property("_mode")
+        if isinstance(mode_, str):
+            return mode_
+        raise TypeError(f"mode_ has type {type(mode_)}; expected str.")
+
+    @mode.setter
+    def mode(self, value: Literal["data", "tables"]) -> None:
+        """
+        Set the data mode name of underlying data.
+
+        Parameters
+        ----------
+        value : {'data', 'tables'}
+            Value to be set
+
+        Raises
+        ------
+        ValueError
+            If `value` is not one of `data` or `tables`.
+        """
+        if value not in ("data", "tables"):
+            raise ValueError("value must be one of 'data' or 'tables'.")
+        self._mode = value
 
     def _return_db(self, db: DataBundle, inplace: bool) -> DataBundle | None:
         """
@@ -98,9 +510,9 @@ class DataBundle(_DataBundle):
         Parameters
         ----------
         db : DataBundle
-          The DataBundle instance containing updated data.
+            The DataBundle instance containing updated data.
         inplace : bool
-          If True modifications are applied in place and None is returned.
+            If True modifications are applied in place and None is returned.
 
         Returns
         -------
@@ -118,48 +530,47 @@ class DataBundle(_DataBundle):
         Parameters
         ----------
         inplace : bool
-          If True return the current instance; otherwise return a copy.
+            If True return the current instance; otherwise return a copy.
 
         Returns
         -------
         :py:class:`~DataBundle` or None
-          The DataBundle instance to operate on.
+            The DataBundle instance to operate on.
         """
         if inplace is True:
             return self
         return self.copy()
 
-    def _stack(self, other: str | list[str], datasets: pd.DataFrame | list[pd.DataFrame], inplace: bool, **kwargs: Any) -> DataBundle | None:
+    def _stack(self, other: DataBundle | Sequence[DataBundle], datasets: str | Sequence[str], inplace: bool, **kwargs: Any) -> DataBundle | None:
         r"""
         Concatenate datasets from multiple DataBundle instances.
 
         Parameters
         ----------
-        other : str or list or str
-          Attribute name(s) of other DataBundle instances whose data should
-          be stacked with the current instance.
-        datasets : pd.DataFrame or list of pdataFrame]
-          Dataset attribute name(s) to be concatenated (e.g., "data", "mask").
+        other : :py:class:`~DataBundle` or Sequence of :py:class:`~DataBundle`
+            Other DataBundle instances whose data should be stacked with the current instance.
+        datasets : str or Sequence of str
+            Dataset attribute name(s) to be concatenated (e.g., "data", "mask").
         inplace : bool
-          If True modify the current instance in place.
+            If True modify the current instance in place.
         \**kwargs : Any
-          Additional keyword-arguments for stacking DataFrames.
+            Additional keyword-arguments for stacking DataFrames.
 
         Returns
         -------
         :py:class:`~DataBundle` or None
-          Updated DataBundle if ``inplace`` is False, otherwise None.
+            Updated DataBundle if ``inplace`` is False, otherwise None.
 
         Raises
         ------
         ValueError
-          If any dataset is an iterator instead of a pandas DataFrame.
+            If any dataset is an iterator instead of a pandas DataFrame.
         """
         db_cp = self._get_db(inplace)
 
-        if not isinstance(other, list):
+        if isinstance(other, DataBundle):
             other = [other]
-        if not isinstance(datasets, list):
+        if isinstance(datasets, str):
             datasets = [datasets]
 
         for data in datasets:
@@ -236,15 +647,19 @@ class DataBundle(_DataBundle):
         return db
 
     def stack_v(
-        self, other: str | list[str], datasets: str | Sequence[str] | Literal["data", "mask"] = ("data", "mask"), inplace: bool = False, **kwargs: Any
+        self,
+        other: DataBundle | Sequence[DataBundle],
+        datasets: str | Sequence[str] | Literal["data", "mask"] = ("data", "mask"),
+        inplace: bool = False,
+        **kwargs: Any,
     ) -> DataBundle | None:
         r"""
         Stack multiple :py:class:`~DataBundle`'s vertically.
 
         Parameters
         ----------
-        other : str or list of str
-            List of other DataBundles to stack vertically.
+        other : :py:class:`~DataBundle` or Sequence of :py:class:`~DataBundle`
+            List of other :py:class:`~DataBundle` to stack vertically.
         datasets : str or Sequence of str, default: (data, mask)
             List of datasets to be stacked.
         inplace : bool, default: False
@@ -274,16 +689,20 @@ class DataBundle(_DataBundle):
         return self._stack(other, datasets, inplace, **kwargs)
 
     def stack_h(
-        self, other: str | list[str], datasets: str | Sequence[str] | Literal["data", "mask"] = ("data", "mask"), inplace: bool = False, **kwargs: Any
+        self,
+        other: DataBundle | Sequence[DataBundle],
+        datasets: str | Sequence[str] | Literal["data", "mask"] = ("data", "mask"),
+        inplace: bool = False,
+        **kwargs: Any,
     ) -> DataBundle | None:
         r"""
         Stack multiple :py:class:`~DataBundle`'s horizontally.
 
         Parameters
         ----------
-        other : str or list of str
+        other : :py:class:`~DataBundle` or Sequence of :py:class:`~DataBundle`
             List of other :py:class:`~DataBundle` to stack horizontally.
-        datasets : str or list of str, default: [data, mask]
+        datasets : str or Sequence of str, default: [data, mask]
             List of datasets to be stacked.
         inplace : bool, default: False
             If True overwrite `datasets` in :py:class:`~DataBundle`

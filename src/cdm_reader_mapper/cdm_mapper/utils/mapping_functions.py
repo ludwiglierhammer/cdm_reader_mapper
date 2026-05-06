@@ -426,16 +426,16 @@ class MappingFunctions:
         lat_ = df_coords.columns[1]
         df_coords["lon_converted"] = coord_360_to_180i(df_coords[lon_])
 
-        time_zone = df_coords.swifter.apply(
+        time_zone = df_coords.apply(
             lambda x: time_zone_i(x[lat_], x["lon_converted"]),
             axis=1,
         )
 
-        strings = df_dates.swifter.apply("-".join, axis=1).values
+        strings = df_dates.apply("-".join, axis=1).values
         data = pd.to_datetime(strings, format=date_format, errors="coerce")
         df_time = pd.DataFrame(data={"Dates": data, "Time_zone": time_zone.values})
 
-        results = df_time.swifter.apply(lambda x: convert_to_utc_i(x["Dates"], x["Time_zone"]), axis=1)
+        results = df_time.apply(lambda x: convert_to_utc_i(x["Dates"], x["Time_zone"]), axis=1)
         results.index = df.index
         return pd.DatetimeIndex(results.dt.tz_convert(None))
 

@@ -83,7 +83,7 @@ def validate_read_mdf_args(
 
     validate_arg("skiprows", skiprows, int)
     if skiprows is not None and skiprows < 0:
-        raise ValueError("skiprows must be positive integer.")
+        raise ValueError("skiprows must be a positive integer.")
 
     validate_arg("year_init", year_init, int)
     validate_arg("year_end", year_end, int)

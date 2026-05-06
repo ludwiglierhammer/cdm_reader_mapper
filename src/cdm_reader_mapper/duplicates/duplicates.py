@@ -30,6 +30,24 @@ def convert_series(df: pd.DataFrame, conversion: dict[Any, Any]) -> pd.DataFrame
     pd.DataFrame
         DataFrame with converted data types.
     """
+
+    def convert_date_to_float(date: pd.Series | pd.DatetimeIndex) -> pd.Series:
+        """
+        Convert datetime values to float seconds relative to the minimum value.
+
+        Parameters
+        ----------
+        date : pd.Series or pd.DatetimeIndex
+            Datetime-like values to convert.
+
+        Returns
+        -------
+        pd.Series
+            Float values representing seconds since the minimum datetime in `date`.
+        """
+        date = date.astype("datetime64[ns]")
+        return (date - date.min()) / np.timedelta64(1, "s")
+
     df = df.copy()
     for column, method in conversion.items():
         try:
@@ -416,14 +434,14 @@ class DupDetect:
                 - A filtered dictionary with identical key-value pairs removed
                 - A list of values that were removed because key == value
             """
-            dictionary_ = {}
-            drops_ = []
+            new_dictionary = {}
+            drops = []
             for k, v in dictionary.items():
                 if k == v:
-                    drops_.append(v)
+                    drops.append(v)
                     continue
-                dictionary_[k] = v
-            return dictionary_, drops_
+                new_dictionary[k] = v
+            return new_dictionary, drops
 
         def replace_keeps_and_drops(df: pd.DataFrame, keep: Any) -> pd.DataFrame:
             """
@@ -446,12 +464,12 @@ class DupDetect:
             while True:
                 df = df.sort_index()
                 replaces = df.apply(lambda row, keeps=keeps: _get_similars(row, keeps), axis=1)
-                replaces = dict(replaces.dropna().values)
-                replaces, drops_ = _delete_values_equal_keys(replaces)
+                replaces = {k: v for k, v in dict(replaces.values).items() if k is not None}
+                replaces, drops = _delete_values_equal_keys(replaces)
                 keys = replaces.keys()
                 values = replaces.values()
-                if len(drops_) > 0:
-                    df = df.drop(drops_, axis="index")
+                if len(drops) > 0:
+                    df = df.drop(drops, axis="index")
                 df[keep] = df[keep].replace(replaces)
                 if not set(keys).intersection(values):
                     return df

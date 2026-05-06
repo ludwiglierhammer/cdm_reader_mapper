@@ -44,11 +44,6 @@ def merge_sum_dicts(dicts: list[Mapping[str, Any]]) -> dict[str, Any]:
     return result
 
 
-# def _is_counts_dict(value: Any) -> TypeGuard[dict[str | tuple[str, str], int]]:
-#    """Return True if *value* is a dict with the expected key/value types."""
-#    return isinstance(value, dict)
-
-
 def _count_by_cat(df: pd.DataFrame, columns: list[Any]) -> dict[Any, int]:
     """
     Count unique values in a pandas DataFrame, including NaNs.
@@ -117,10 +112,8 @@ def count_by_cat(
         non_data_proc=merge_sum_dicts,
     )
 
-    if isinstance(result, dict):
-        return result
-
-    raise TypeError(f"result is not a dictionary, {type(result)}.")
+    # The decorator converts the ProcessFunction to the requested return data type.
+    return result  # type: ignore[return-value]
 
 
 def _get_length(data: pd.DataFrame) -> int:
@@ -170,8 +163,6 @@ def get_length(data: pd.DataFrame | Iterable[pd.DataFrame] | ParquetStreamReader
         makecopy=True,
         non_data_proc=sum,
     )
+    # The decorator converts the ProcessFunction to the requested return data type.
 
-    if isinstance(result, int):
-        return result
-
-    raise TypeError(f"result is not a integer, {type(result)}.")
+    return result  # type: ignore[return-value]

@@ -614,6 +614,8 @@ def test_process_chunks_data_only():
         non_data_proc_kwargs={},
     )
 
+    print(result)
+
     data_reader = result[0]
     output = data_reader.read()
 

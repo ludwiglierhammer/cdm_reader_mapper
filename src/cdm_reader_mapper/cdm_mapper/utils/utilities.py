@@ -40,42 +40,40 @@ def dict_to_tuple_list(dic: dict[Any, Any]) -> list[tuple[Any, Any]]:
     return tuple_list
 
 
-def get_cdm_subset(cdm_subset: Iterable[str] | None) -> list[str]:
+def get_cdm_subset(cdm_subset: str | Iterable[str] | None) -> list[str]:
     """
     Normalize and validate a CDM subset specification.
 
     This function ensures that the returned value is always a list of valid
-    CDM table names (as defined in ``properties.cdm_tables``). It accepts:
+    CDM table names (as defined in `properties.cdm_tables`). It accepts:
 
-    - ``None`` ? returns the full list of CDM tables.
-    - A single string ? validated and returned as a one-element list.
-    - An iterable of strings ? each entry is validated and returned unchanged.
-
-    Any value not present in ``properties.cdm_tables`` will raise ``ValueError``.
+    - `None` returns the full list of CDM tables.
+    - A single string validated and returned as a one-element list.
+    - An iterable of strings each entry is validated and returned unchanged.
 
     Parameters
     ----------
-    cdm_subset : iterable of str or str or None
+    cdm_subset : str, Iterable of str or None
         CDM subset input to normalize. May be:
-        - ``None`` ? full list of CDM tables is returned.
-        - ``str`` ? returned as a list containing that string.
-        - Any iterable (e.g., list) of strings ? returned unchanged after validation.
+        - `None`: full list of CDM tables is returned.
+        - `str`: returned as a list containing that string.
+        - Any iterable (e.g., list) of strings: returned unchanged after validation.
 
     Returns
     -------
     list of str
         A list of CDM table names that are guaranteed to exist in
-        ``properties.cdm_tables``.
+        `properties.cdm_tables`.
 
     Raises
     ------
     ValueError
-        If any provided table name is not in ``properties.cdm_tables``.
+        If any provided table name is not in `properties.cdm_tables`.
     """
     if cdm_subset is None:
         return list(properties.cdm_tables)
 
-    if isinstance(cdm_subset, str):
+    if isinstance(cdm_subset, str) or not isinstance(cdm_subset, Iterable):
         cdm_subset = [cdm_subset]
     else:
         cdm_subset = list(cdm_subset)
@@ -99,7 +97,7 @@ def get_usecols(tb: str, col_subset: str | Iterable[str] | dict[str, Any] | None
     ----------
     tb : str
         Table name. Only used if `col_subset` is a dictionary.
-    col_subset : str, iterable of str, dict, or None
+    col_subset : str, Iterable of str, dict, or None
         Column subset specification. Acceptable formats:
         - A single column name as a string.
         - An iterable of column names (list, tuple, set, etc.).

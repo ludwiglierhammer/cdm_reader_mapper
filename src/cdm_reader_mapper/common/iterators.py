@@ -232,7 +232,10 @@ class ParquetStreamReader:
         value : Any
             Value to assign.
         """
-        setattr(self, item, value)
+        if item in self.attrs:
+            setattr(self.attrs, item, value)
+        else:
+            raise TypeError("'ParquetStreamReader' object does not support item assignment.")
 
     def prepend(self, chunk: pd.DataFrame | pd.Series) -> None:
         """
@@ -826,13 +829,12 @@ def _process_chunks(
         _validate_chunk(items, requested_types)
 
         result = func(*items, *static_args, **static_kwargs)
-
         data, meta = _process_result(result, requested_types, non_data_output, chunk_counter)
 
         _accumulate_meta(output_non_data_dict, meta)
 
         if data:
-            temo_dirs, schemas = _handle_data_write(data, temp_dirs, schemas, chunk_counter)
+            temp_dirs, schemas = _handle_data_write(data, temp_dirs, schemas, chunk_counter)
 
         chunk_counter += 1
 
@@ -1037,7 +1039,7 @@ def process_disk_backed(
     non_data_proc_args: tuple[Any, ...] | None = None,
     non_data_proc_kwargs: dict[str, Any] | None = None,
     makecopy: bool = True,
-) -> tuple[Any, ...]:
+) -> tuple[Any, ...] | None:
     """
     Consume a stream of DataFrames, processes them, and returns a tuple of results.
 
@@ -1072,7 +1074,7 @@ def process_disk_backed(
 
     Returns
     -------
-    tuple of Any
+    tuple of Any or None
         A tuple containing:
 
         - One or more ParquetStreamReader objects for chunked data outputs
@@ -1168,6 +1170,9 @@ def _process_function(results: Any, data_only: bool = False) -> Any:
         func_kwargs=kwargs,
         **results.kwargs,
     )
+
+    if result is None:
+        return None
 
     if data_only is True:
         result = result[0]

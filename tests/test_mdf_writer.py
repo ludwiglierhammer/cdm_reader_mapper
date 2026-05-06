@@ -233,5 +233,5 @@ def test_write_data_invalid_data_format(example_data):
 
 
 def test_write_data_invalid_mask_type(example_data):
-    with pytest.raises(ValueError, match="type of 'data' and type of 'mask' do not match."):
+    with pytest.raises(ValueError, match="Type of 'data' and type of 'mask' do not match."):
         write_data(example_data, mask=[True, False, True])

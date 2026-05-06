@@ -76,7 +76,7 @@ _base = f"{properties._base}.station_id"
 def _get_id_col(
     data: pd.DataFrame,
     imodel: str,
-) -> str | list[str]:
+) -> str | tuple[str, str] | list[str | tuple[str, str]]:
     """
     Retrieve the ID column(s) for a given data model from the metadata.
 
@@ -101,12 +101,7 @@ def _get_id_col(
     if id_col is None:
         raise ValueError(f"Data model {imodel} ID column not defined in properties file.")
 
-    if isinstance(id_col, str):
-        id_col_lst = [id_col]
-    else:
-        id_col_lst = list(id_col)
-
-    id_col_lst = [col for col in id_col_lst if col in data.columns]
+    id_col_lst = [col for col in [id_col] if col in data.columns]
     if not id_col_lst:
         raise ValueError(f"No ID columns found. Selected columns are {list(data.columns)}")
 

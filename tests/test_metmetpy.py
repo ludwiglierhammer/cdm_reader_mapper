@@ -489,7 +489,7 @@ def test_correct_dt_pass():
 
     result = _correct_dt(
         data.copy(),
-        data_model="icoads",
+        imodel="icoads",
         dck="201",
         correction_method=correction_method,
     )
@@ -509,7 +509,7 @@ def test_correct_dt_no_correction():
 
     result = _correct_dt(
         data.copy(),
-        data_model="icoads",
+        imodel="icoads",
         dck="201",
         correction_method={},
     )
@@ -520,7 +520,7 @@ def test_correct_dt_no_correction():
 def test_correct_dt_typeerror():
     series = pd.Series([1898, 1900, 1899])
     with pytest.raises(TypeError, match="pd.Series is not supported now."):
-        _correct_dt(series, data_model="icoads", dck="201", correction_method={})
+        _correct_dt(series, imodel="icoads", dck="201", correction_method={})
 
 
 def test_correct_dt_attributeerror():
@@ -538,7 +538,7 @@ def test_correct_dt_attributeerror():
     with pytest.raises(AttributeError, match="not found"):
         _correct_dt(
             data.copy(),
-            data_model="icoads",
+            imodel="icoads",
             dck="201",
             correction_method=correction_method,
         )
@@ -558,7 +558,7 @@ def test_correct_dt_runtimeerror():
     with pytest.raises(RuntimeError, match="could not be executed"):
         _correct_dt(
             invalid_data,
-            data_model="icoads",
+            imodel="icoads",
             dck="201",
             correction_method=correction_method,
         )
@@ -568,7 +568,7 @@ def test_correct_pt_fillna():
     pt_col = "platform"
     data = pd.DataFrame({pt_col: [None, "5", None, "3"]})
 
-    fix_methods = {
+    correction_method = {
         "201": {
             "method": "fillna",
             "fill_value": "7",
@@ -582,7 +582,7 @@ def test_correct_pt_fillna():
         imodel="icoads",
         dck="201",
         pt_col=pt_col,
-        fix_methods=fix_methods,
+        correction_method=correction_method,
     )
 
     pd.testing.assert_frame_equal(result, expected, check_dtype=False)
@@ -597,7 +597,7 @@ def test_correct_pt_function():
         }
     )
 
-    fix_methods = {
+    correction_method = {
         "700": {
             "method": "function",
             "function": "deck_700_icoads",
@@ -617,7 +617,7 @@ def test_correct_pt_function():
         imodel="icoads",
         dck="700",
         pt_col=PT,
-        fix_methods=fix_methods,
+        correction_method=correction_method,
     )
 
     pd.testing.assert_frame_equal(result, expected, check_dtype=False)
@@ -627,14 +627,14 @@ def test_correct_pt_no_correction():
     pt_col = "PT"
     data = pd.DataFrame({pt_col: ["1", None, "3"]})
 
-    fix_methods = {"999": {"method": "fillna", "fill_value": "7"}}
+    correction_method = {"999": {"method": "fillna", "fill_value": "7"}}
 
     result = _correct_pt(
         data.copy(),
         imodel="icoads",
         dck="888",
         pt_col=pt_col,
-        fix_methods=fix_methods,
+        correction_method=correction_method,
     )
 
     pd.testing.assert_frame_equal(result, data)
@@ -643,14 +643,14 @@ def test_correct_pt_no_correction():
 def test_correct_pt_missing_platform_column():
     data = pd.DataFrame({"A": [1, 2], "B": [3, 4]})
 
-    fix_methods = {"201": {"method": "fillna", "fill_value": "7"}}
+    correction_method = {"201": {"method": "fillna", "fill_value": "7"}}
 
     result = _correct_pt(
         data.copy(),
         imodel="icoads",
         dck="201",
         pt_col="PT",
-        fix_methods=fix_methods,
+        correction_method=correction_method,
     )
 
     pd.testing.assert_frame_equal(result, data)
@@ -659,7 +659,7 @@ def test_correct_pt_missing_platform_column():
 def test_correct_pt_valueerror_not_implemented():
     data = pd.DataFrame({"PT": ["1", "2"]})
 
-    fix_methods = {"201": {"method": "not_a_method"}}
+    correction_method = {"201": {"method": "not_a_method"}}
 
     with pytest.raises(ValueError, match="not implemented"):
         _correct_pt(
@@ -667,20 +667,20 @@ def test_correct_pt_valueerror_not_implemented():
             imodel="icoads",
             dck="201",
             pt_col="PT",
-            fix_methods=fix_methods,
+            correction_method=correction_method,
         )
 
 
 def test_correct_pt_typeerror():
     series = pd.Series(["1", "2"])
     with pytest.raises(TypeError, match="pd.Series is not supported now."):
-        _correct_pt(series, imodel="icoads", dck="201", pt_col="PT", fix_methods={})
+        _correct_pt(series, imodel="icoads", dck="201", pt_col="PT", correction_method={})
 
 
 def test_correct_pt_valuerror_fillvalue():
     data = pd.DataFrame({"PT": ["1", None]})
 
-    fix_methods = {"201": {"method": "fillna"}}
+    correction_method = {"201": {"method": "fillna"}}
 
     with pytest.raises(ValueError, match='requires "fill_value"'):
         _correct_pt(
@@ -688,14 +688,14 @@ def test_correct_pt_valuerror_fillvalue():
             imodel="icoads",
             dck="201",
             pt_col="PT",
-            fix_methods=fix_methods,
+            correction_method=correction_method,
         )
 
 
 def test_correct_pt_valueerror_no_function_name():
     data = pd.DataFrame({"PT": ["1", "2"]})
 
-    fix_methods = {"700": {"method": "function"}}
+    correction_method = {"700": {"method": "function"}}
 
     with pytest.raises(ValueError, match='requires "function" name'):
         _correct_pt(
@@ -703,14 +703,14 @@ def test_correct_pt_valueerror_no_function_name():
             imodel="icoads",
             dck="700",
             pt_col="PT",
-            fix_methods=fix_methods,
+            correction_method=correction_method,
         )
 
 
 def test_correct_pt_valueerror_no_function_found():
     data = pd.DataFrame({"PT": ["1", "2"]})
 
-    fix_methods = {"700": {"method": "function", "function": "NO_SUCH_FUNC"}}
+    correction_method = {"700": {"method": "function", "function": "NO_SUCH_FUNC"}}
 
     with pytest.raises(ValueError, match="not found"):
         _correct_pt(
@@ -718,7 +718,7 @@ def test_correct_pt_valueerror_no_function_found():
             imodel="icoads",
             dck="700",
             pt_col="PT",
-            fix_methods=fix_methods,
+            correction_method=correction_method,
         )
 
 

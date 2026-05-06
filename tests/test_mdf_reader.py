@@ -108,22 +108,22 @@ def test_read_mdf_test_data_basic(data_model):
         ("icoads_r300_d721", {"chunksize": 3}),
         (
             "icoads_r300_d703",
-            {"ext_schema_path": Path("cdm_reader_mapper") / "mdf_reader" / "schemas" / "icoads"},
+            {"ext_schema_path": Path("src") / "cdm_reader_mapper" / "mdf_reader" / "schemas" / "icoads"},
         ),
         (
             "icoads_r300_d703",
-            {"ext_table_path": Path("cdm_reader_mapper") / "mdf_reader" / "codes" / "icoads"},
+            {"ext_table_path": Path("src") / "cdm_reader_mapper" / "mdf_reader" / "codes" / "icoads"},
         ),
         (
             "icoads_r300_d703",
             {
-                "ext_table_path": Path("cdm_reader_mapper") / "mdf_reader" / "codes" / "icoads",
-                "ext_schema_path": Path("cdm_reader_mapper") / "mdf_reader" / "schemas" / "icoads",
+                "ext_table_path": Path("src") / "cdm_reader_mapper" / "mdf_reader" / "codes" / "icoads",
+                "ext_schema_path": Path("src") / "cdm_reader_mapper" / "mdf_reader" / "schemas" / "icoads",
             },
         ),
         (
             "icoads_r300_d703",
-            {"ext_schema_file": Path("cdm_reader_mapper") / "mdf_reader" / "schemas" / "icoads" / "icoads.json"},
+            {"ext_schema_file": Path("src") / "cdm_reader_mapper" / "mdf_reader" / "schemas" / "icoads" / "icoads.json"},
         ),
     ],
 )
@@ -408,7 +408,7 @@ def test_validate_read_mdf_args_invalid_chunksize(tmp_path):
     source = tmp_path / "file.mdf"
     source.touch()
 
-    with pytest.raises(ValueError, match="chunksize must be a positive integer"):
+    with pytest.raises(ValueError, match="chunksize must be a real positive integer"):
         validate_read_mdf_args(
             source=source,
             imodel=object(),
@@ -425,7 +425,7 @@ def test_validate_read_mdf_args_invalid_skiprows(tmp_path):
     source = tmp_path / "file.mdf"
     source.touch()
 
-    with pytest.raises(ValueError, match="skiprows must be >= 0"):
+    with pytest.raises(ValueError, match="skiprows must be a positive integer"):
         validate_read_mdf_args(
             source=source,
             imodel=object(),

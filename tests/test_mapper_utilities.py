@@ -71,10 +71,6 @@ def test_get_cdm_subset_valid(input_value, expected):
         ["header", "does-not-exist"],
         ["wrong"],
         ["observations-at", "xxx"],
-        (
-            "header",
-            "observations-at",
-        ),
         123,
         [1, 2, 3],
     ],

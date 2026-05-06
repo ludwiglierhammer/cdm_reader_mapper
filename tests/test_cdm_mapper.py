@@ -22,7 +22,7 @@ from cdm_reader_mapper.cdm_mapper.mapper import (
 from cdm_reader_mapper.cdm_mapper.properties import cdm_tables
 from cdm_reader_mapper.cdm_mapper.reader import read_tables
 from cdm_reader_mapper.cdm_mapper.tables.tables import get_cdm_atts, get_imodel_maps
-from cdm_reader_mapper.cdm_mapper.utils.mapping_functions import mapping_functions
+from cdm_reader_mapper.cdm_mapper.utils.mapping_functions import MappingFunctions
 from cdm_reader_mapper.common import logging_hdlr
 from cdm_reader_mapper.data import test_data
 
@@ -34,7 +34,7 @@ def imodel_maps():
 
 @pytest.fixture
 def imodel_functions():
-    return mapping_functions("icoads_r300_d720")
+    return MappingFunctions("icoads_r300_d720")
 
 
 @pytest.fixture
@@ -75,7 +75,7 @@ def data_header_expected():
     )
 
 
-def _map_model_test_data(data_model, encoding="utf-8", select=None, **kwargs):
+def _map_model_test_data(data_model, select=None, **kwargs):
     source = test_data[f"test_{data_model}"]["mdf_data"]
 
     df = pd.read_parquet(source)
@@ -87,7 +87,7 @@ def _map_model_test_data(data_model, encoding="utf-8", select=None, **kwargs):
                 val = ast.literal_eval(x)
                 if isinstance(val, tuple):
                     return val
-            except (TypeError, AttributeError):
+            except (TypeError, ValueError, AttributeError):
                 return (x, "")
 
         df.columns = pd.MultiIndex.from_tuples([to_tuple(col) for col in df.columns])

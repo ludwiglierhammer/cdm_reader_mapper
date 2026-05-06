@@ -185,8 +185,9 @@ def write_tables(
     from_str: bool | None = None,
     to_str: bool | None = None,
     imodel: str | None = None,
+    **kwargs: Any,
 ) -> None:
-    """
+    r"""
     Write pandas.DataFrame to CDM-table file on file system.
 
     Parameters
@@ -241,6 +242,8 @@ def write_tables(
     imodel : str , optional
         Name of data model, e.g. icoads.
         Must be set if either `from_str` or `to_str` is set.
+    \**kwargs : Any
+        Additional keyword-arguments that will be ignored.
 
     See Also
     --------
@@ -253,7 +256,8 @@ def write_tables(
 
     Notes
     -----
-    Use this function after reading CDM tables.
+    - Use this function after reading CDM tables.
+    - `kwargs` will be ignored!
     """
     logger = logging_hdlr.init_logger(__name__, level="INFO")
     supported_file_types = get_args(SupportedFileTypes)
@@ -273,6 +277,9 @@ def write_tables(
     if data.empty:
         logger.warning("All CDM tables are empty")
         return
+
+    if kwargs:
+        logging.warning("'kwargs' will be ignored: %s", kwargs)
 
     if isinstance(filename, dict):
         cdm_subset = list(filename.keys())

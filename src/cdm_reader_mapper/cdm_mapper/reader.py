@@ -74,7 +74,7 @@ READER_KWARGS = {
 
 
 def _read_file(
-    ifile: str,
+    ifile: str | Path,
     table: str,
     col_subset: str | list[str] | dict[str, Any] | None,
     data_format: SupportedFileTypes,
@@ -85,7 +85,7 @@ def _read_file(
 
     Parameters
     ----------
-    ifile : str
+    ifile : str or Path
         Path to the input file.
     table : str
         Table name used to determine column selection.
@@ -108,7 +108,7 @@ def _read_file(
 
 
 def _read_single_file(
-    ifile: str,
+    ifile: str | Path,
     data_format: SupportedFileTypes,
     cdm_subset: str | list[str],
     col_subset: str | list[str] | dict[str, Any] | None,
@@ -120,7 +120,7 @@ def _read_single_file(
 
     Parameters
     ----------
-    ifile : str
+    ifile : str or Path
         Path to the input file.
     data_format : SupportedFileTypes
         File format used to read the file.
@@ -234,11 +234,14 @@ def _read_multiple_files(
         suffix_pattern = f"*{suffix}"
 
     # See if there's anything at all:
-    pattern = get_filename([prefix, suffix_pattern], path=inp_dir, extension=extension, separator=separator)
-    files = [p.as_posix() for p in Path(inp_dir).glob(pattern)]
+    full_pattern = get_filename([prefix, suffix_pattern], path=inp_dir, extension=extension, separator=separator)
+    path_pattern = Path(full_pattern)
+    base_dir = path_pattern.parent
+    file_pattern = path_pattern.name
+    files = list(base_dir.glob(file_pattern))
 
     if len(files) == 0:
-        raise FileNotFoundError(f"No files found matching pattern {pattern}")
+        raise FileNotFoundError(f"No files found matching pattern {full_pattern}")
 
     df_list = []
     if not isinstance(cdm_subset, list):
@@ -250,19 +253,26 @@ def _read_multiple_files(
             continue
 
         logger.info("Getting file path for pattern %s", table)
-        _pattern = [table]
+        table_pattern = [table]
         if prefix:
-            _pattern = [prefix] + _pattern
+            table_pattern = [prefix] + table_pattern
         if suffix:
-            _pattern = _pattern + [suffix_pattern]
-        pattern_ = get_filename(_pattern, path=inp_dir, extension=extension, separator=separator)
-        paths_ = [p.as_posix() for p in Path(inp_dir).glob(pattern_)]
-        if len(paths_) != 1:
-            logger.warning("Pattern %s resulted in multiple files for table %s: %s Cannot securely retrieve cdm table(s)", pattern_, table, paths_)
+            table_pattern = table_pattern + [suffix_pattern]
+
+        full_table_pattern = get_filename(table_pattern, path=inp_dir, extension=extension, separator=separator)
+        table_path_pattern = Path(full_table_pattern)
+        table_base_dir = table_path_pattern.parent
+        table_file_pattern = table_path_pattern.name
+        paths = list(table_base_dir.glob(table_file_pattern))
+
+        if len(paths) != 1:
+            logger.warning(
+                "Pattern %s resulted in multiple files for table %s: %s Cannot securely retrieve cdm table(s)", table_pattern, table, paths
+            )
             continue
 
         dfi = _read_single_file(
-            paths_[0],
+            paths[0],
             data_format=data_format,
             cdm_subset=[table],
             col_subset=col_subset,
