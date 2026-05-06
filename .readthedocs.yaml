@@ -16,7 +16,7 @@ build:
     python: "mambaforge-23.11"
   jobs:
     pre_build:
-      - sphinx-apidoc -o docs/apidoc --private --module-first src/marine_qc
+      - sphinx-apidoc -o docs/apidoc --private --module-first src/cdm_reader_mapper
 
 conda:
   environment: environment-docs.yml
