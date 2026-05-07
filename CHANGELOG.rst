@@ -3,6 +3,46 @@
 Changelog
 =========
 
+2.5.0 (unreleased)
+------------------
+Contributor to this version: Ludwig Lierhammer (:user:`ludwiglierhammer`)
+
+Announcements
+^^^^^^^^^^^^^
+* `cdm_reader_mapper` now drops support for Python 3.10 (:pull:`419`)
+* `cdm_reader_mapper` now uses `cruft <https://cruft.github.io/cruft/>` and the `Ouranosinc cookiecutter template <https://github.com/Ouranosinc/cookiecutter-pypackage>` (:issue:`369`, :pull:`419`)
+
+New features and enhancements
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+* The documentation now uses the `furo <https://github.com/pradyunsg/furo>`_ theme for Sphinx (:pull:`419`)
+
+Breaking changes
+^^^^^^^^^^^^^^^^
+* Development dependencies ("dev", "docs") are now installed via the new `dependency-groups` conventions (`PEP 735 <https://peps.python.org/pep-0735/>`_) (:pull:`419`)
+* `prek` is now the suggested pre-commit runner (installed by default via `pip install --group dev`) (:pull:`419`)
+
+Internal changes
+^^^^^^^^^^^^^^^^
+* Updated the project template and boilerplate code to address configuration issues and benefit from new workflows/conventions (:pull:`419`):
+
+  * A new workflow has been added to automatically accept minor/patch updates to GitHub Actions and Python deps coming from Dependabot.
+  * `tox.ini`` has migrated to `tox.toml` (new standard).
+  * `pyproject.toml` and `tox.toml` now use `[dependency-groups]` to manage non-end-user dependency lists.
+  * The `Makefile` recipes are much cleaner and now manage some dependency installation calls.
+  * Various dependency updates.
+
+* The numpydoc linting tool has been added to the linting checks, and the pre.commit configurations (:pull:`419`)
+* The mypy type checking has been added to the pre-commit configurations (:issue:`368`, :pull:`419`)
+* Documentation is now build without any warning messages (:pull:`419`)
+* `readthedocs.yaml`: set `fail_on_warnings` to "true" (:pull:`419`)
+* all modules are moved from "cdm_reader_mapper" to "src/cdm_reader_mapper" (:pull:`419`)
+* `CHANGES.rst` has been renamed to `CHANGELOG.rst`, see suggestion from `keepachangelog v.1.1.0 <https://keepachangelog.com/en/1.1.0/>`_ specifications. (:pull:`419`).
+* rename class `cdm_mapper.utils.mapping_funcitons.mapping_functions` to `cdm_mapper.utils.mapping_funcitons.MappingFunctions` (:pull:`419`)
+* remove helper class `core._utilities._DataBundle` and integrate it in `core.databundle.DataBundle` (:pull:`419`)
+* make use of `pathlib.Path` instead of `os.path` (:pull:`419`)
+* use consistently parameter "imodel" instead of "data_model" and "correction_method" instead of "fix_method" in `metmetpy` modules (:pull:`419`)
+
+
 2.4.1 (2016-04-16)
 ------------------
 Contributor to this version: Ludwig Lierhammer (:user:`ludwiglierhammer`)
