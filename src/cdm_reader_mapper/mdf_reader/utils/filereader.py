@@ -9,8 +9,7 @@ from typing import Any
 
 import dask  # noqa: F401
 import h5netcdf  # noqa: F401
-
-# import netCDF4  # noqa: F401
+import h5py  # noqa: F401
 import pandas as pd
 import xarray as xr
 
