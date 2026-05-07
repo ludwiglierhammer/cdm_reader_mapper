@@ -28,7 +28,7 @@ from .validators import validate
 
 
 try:
-    import netCDF4  # noqa: F401
+    import netCDF4  # noqa: F401, DEP001, DEP002
 except ImportError as err:
     raise ImportError("'netCDF4' is required for this functionality.") from err
 
