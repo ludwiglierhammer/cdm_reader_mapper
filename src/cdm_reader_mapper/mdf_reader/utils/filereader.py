@@ -7,6 +7,10 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
+import dask  # noqa: F401
+import h5netcdf  # noqa: F401
+
+# import netCDF4  # noqa: F401
 import pandas as pd
 import xarray as xr
 
@@ -25,22 +29,6 @@ from .parser import (
 )
 from .utilities import remove_boolean_values
 from .validators import validate
-
-
-try:
-    import netCDF4  # noqa: F401, DEP001, DEP002
-except ImportError as err:
-    raise ImportError("'netCDF4' is required for this functionality.") from err
-
-try:
-    import h5netcdf  # noqa: F401
-except ImportError as err:
-    raise ImportError("'h5netcdf' is required for this functionality.") from err
-
-try:
-    import dask  # noqa: F401
-except ImportError as err:
-    raise ImportError("'dask' is required for this functionality.") from err
 
 
 def _merge_kwargs(*dicts: Mapping[str, Any]) -> dict[str, Any]:
