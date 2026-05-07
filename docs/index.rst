@@ -92,11 +92,21 @@ About
 
 |newline|
 
-|newline|
+.. raw:: html
 
-|tab| |tab| |tab| |tab| |tab| |tab| |tab| |tab| |tab| |tab| |tab| |logo_c3s| |logo_ICOADS| |logo_copernicus|
+   <div style="text-align: right;">
+       <img src="https://raw.githubusercontent.com/glamod/cdm_reader_mapper/main/docs/_static/images/logos_c3s/logo_c3s-392x154.png" width="150">
+       <img src="https://raw.githubusercontent.com/glamod/cdm_reader_mapper/main/docs/_static/images/logos_c3s/icoadsLogo.png" width="140">
+       <img src="https://raw.githubusercontent.com/glamod/cdm_reader_mapper/main/docs/_static/images/logos_c3s/copernicus.png" width="150">
+   </div>
 
-|tab| |tab| |tab| |tab| |tab| |tab| |tab| |tab| |tab| |tab| |tab| |tab| |tab| |tab| |logo_DWD| |logo_NOC|
+.. raw:: html
+
+   <div style="text-align: right;">
+       <img src="https://raw.githubusercontent.com/glamod/cdm_reader_mapper/main/docs/_static/images/logos_c3s/logo_DWD_RGB.png" width="180">
+       <img src="https://raw.githubusercontent.com/glamod/cdm_reader_mapper/main/docs/_static/images/logos_c3s/LOGO_2025_NOC.png" width="150">
+   </div>
+
 
 .. include:: hyperlinks.rst
 
@@ -106,7 +116,3 @@ About
 .. |newline| raw:: html
 
    <br>
-
-.. |tab| raw:: html
-
-   &emsp;  <!-- HTML em-space -->
