@@ -61,23 +61,3 @@
 .. _uv: https://docs.astral.sh/uv/
 
 .. _xarray: https://docs.xarray.dev/en/stable/
-
-.. |logo_c3s| image:: _static/images/logos_c3s/logo_c3s-392x154.png
-        :width: 25%
-        :target: https://climate.copernicus.eu/
-
-.. |logo_copernicus| image:: _static/images/logos_c3s/copernicus.png
-        :width: 25%
-        :target: https://www.copernicus.eu/en
-
-.. |logo_ICOADS| image:: _static/images/logos_c3s/icoadsLogo.png
-        :width: 20%
-        :target: https://icoads.noaa.gov/
-
-.. |logo_NOC| image:: _static/images/logos_c3s/LOGO_2025_NOC.png
-        :width: 25%
-        :target: https://noc.ac.uk/
-
-.. |logo_DWD| image:: _static/images/logos_c3s/logo_DWD_RGB.png
-        :width: 35%
-        :target: https://www.dwd.de/
