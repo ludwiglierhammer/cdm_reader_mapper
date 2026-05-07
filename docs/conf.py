@@ -113,7 +113,7 @@ project = "cdm_reader_mapper"
 author = """
 Ludwig Lierhammer, Joseph Siddons, Jan Marius Willruth, Axel Andersson, Tina Leiding, Richard Cornes and Elizabeth Kent
 """
-copyright = f"2019-2025, {author}"
+copyright = f"2019-2026, {author}"
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
