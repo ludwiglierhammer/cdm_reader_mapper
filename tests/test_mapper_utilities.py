@@ -3,12 +3,11 @@ from __future__ import annotations
 import pytest
 
 from cdm_reader_mapper.cdm_mapper.properties import cdm_tables
-
 from cdm_reader_mapper.cdm_mapper.utils.utilities import (
+    adjust_filename,
     dict_to_tuple_list,
     get_cdm_subset,
     get_usecols,
-    adjust_filename,
 )
 
 
@@ -72,10 +71,6 @@ def test_get_cdm_subset_valid(input_value, expected):
         ["header", "does-not-exist"],
         ["wrong"],
         ["observations-at", "xxx"],
-        (
-            "header",
-            "observations-at",
-        ),
         123,
         [1, 2, 3],
     ],
@@ -101,9 +96,7 @@ def test_get_usecols(tb, col_subset, expected):
 
 
 def test_get_usecols_raises():
-    with pytest.raises(
-        TypeError, match="col_subset must be str, iterable of str, dict, or None"
-    ):
+    with pytest.raises(TypeError, match="col_subset must be str, iterable of str, dict, or None"):
         get_usecols("table1", 123)
 
 

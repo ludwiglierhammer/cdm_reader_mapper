@@ -38,6 +38,4 @@ This is a summary of the steps needed to add an imodel to the mapping tool:
 
 .. note:: For any questions, please leave us a comment on the `issue tracker`_.
 
-.. include:: hyperlinks
-
 .. _issue tracker: https://github.com/glamod/cdm_reader_mapper/issues

@@ -15,7 +15,7 @@ on:
       - docs/*/*.py
       - docs/*/*.rst
       - pyproject.toml
-      - cdm_reader_mapper/__init__.py
+      - src/cdm_reader_mapper/__init__.py
   pull_request:
     branches:
       - main

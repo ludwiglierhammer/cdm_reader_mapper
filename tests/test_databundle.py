@@ -3,10 +3,11 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
+from cdm_reader_mapper import DataBundle
 from cdm_reader_mapper.common.iterators import ParquetStreamReader
+from cdm_reader_mapper.core._utilities import SubscriptableMethod
 from cdm_reader_mapper.duplicates.duplicates import DupDetect
 
-from cdm_reader_mapper import DataBundle
 
 YR = ("core", "YR")
 MO = ("core", "MO")
@@ -30,7 +31,7 @@ def sample_db_df():
             "B": [True, True, True, False, False],
         }
     )
-    return DataBundle(data=data, mask=mask)
+    return DataBundle(data=data, mask=mask, imodel="test_model", dtypes=data.dtypes)
 
 
 @pytest.fixture
@@ -47,7 +48,7 @@ def sample_db_df_multi():
             ("B", "b"): [True, True, True, False, False],
         }
     )
-    return DataBundle(data=data, mask=mask)
+    return DataBundle(data=data, mask=mask, imodel="test_model", dtypes=data.dtypes)
 
 
 @pytest.fixture
@@ -57,32 +58,26 @@ def sample_db_psr():
     data = ParquetStreamReader([data1, data2])
 
     mask1 = pd.DataFrame({"A": [True, True], "B": [True, True]}, index=[0, 1])
-    mask2 = pd.DataFrame(
-        {"A": [True, False, True], "B": [True, False, False]}, index=[2, 3, 4]
-    )
+    mask2 = pd.DataFrame({"A": [True, False, True], "B": [True, False, False]}, index=[2, 3, 4])
     mask = ParquetStreamReader([mask1, mask2])
 
-    return DataBundle(data=data, mask=mask)
+    return DataBundle(data=data, mask=mask, imodel="test_model", dtypes=data1.dtypes)
 
 
 @pytest.fixture
 def sample_db_psr_multi():
     data1 = pd.DataFrame({("A", "a"): [19, 26], ("B", "b"): [0, 1]}, index=[0, 1])
-    data2 = pd.DataFrame(
-        {("A", "a"): [27, 41, 91], ("B", "b"): [2, 3, 4]}, index=[2, 3, 4]
-    )
+    data2 = pd.DataFrame({("A", "a"): [27, 41, 91], ("B", "b"): [2, 3, 4]}, index=[2, 3, 4])
     data = ParquetStreamReader([data1, data2])
 
-    mask1 = pd.DataFrame(
-        {("A", "a"): [True, True], ("B", "b"): [True, True]}, index=[0, 1]
-    )
+    mask1 = pd.DataFrame({("A", "a"): [True, True], ("B", "b"): [True, True]}, index=[0, 1])
     mask2 = pd.DataFrame(
         {("A", "a"): [True, False, True], ("B", "b"): [True, False, False]},
         index=[2, 3, 4],
     )
     mask = ParquetStreamReader([mask1, mask2])
 
-    return DataBundle(data=data, mask=mask)
+    return DataBundle(data=data, mask=mask, imodel="test_model", dtypes=data1.dtypes)
 
 
 @pytest.fixture
@@ -93,6 +88,239 @@ def sample_data():
 @pytest.fixture
 def sample_mask():
     return pd.DataFrame({"C": [True, False, True, False, False]})
+
+
+def test_init_df(sample_db_df):
+    db = sample_db_df
+    assert isinstance(db.data, pd.DataFrame)
+    assert isinstance(db.mask, pd.DataFrame)
+
+    assert list(db.columns) == ["A", "B"]
+    assert set(db.dtypes.index) == {"A", "B"}
+    assert db.imodel == "test_model"
+    assert db.mode == "data"
+
+    pd.testing.assert_frame_equal(db.data, pd.DataFrame({"A": [19, 26, 27, 41, 91], "B": [0, 1, 2, 3, 4]}))
+    pd.testing.assert_frame_equal(db.mask, pd.DataFrame({"A": [True, True, True, False, True], "B": [True, True, True, False, False]}))
+
+
+def test_init_psr(sample_db_psr):
+    db = sample_db_psr.copy()
+    assert isinstance(db.data, ParquetStreamReader)
+    assert isinstance(db.mask, ParquetStreamReader)
+
+    assert list(db.columns) == ["A", "B"]
+    assert set(db.dtypes.index) == {"A", "B"}
+    assert db.imodel == "test_model"
+    assert db.mode == "data"
+
+    pd.testing.assert_frame_equal(db.data.read(), pd.DataFrame({"A": [19, 26, 27, 41, 91], "B": [0, 1, 2, 3, 4]}))
+    pd.testing.assert_frame_equal(db.mask.read(), pd.DataFrame({"A": [True, True, True, False, True], "B": [True, True, True, False, False]}))
+
+
+def test_init_iterators():
+    data1 = pd.DataFrame([{"A": 1, "B": 2}])
+    data2 = pd.DataFrame([{"A": 3, "B": 4}])
+
+    mask1 = pd.DataFrame([{"A": True, "B": False}])
+    mask2 = pd.DataFrame([{"A": False, "B": True}])
+
+    db = DataBundle(
+        data=[data1, data2],
+        mask=[mask1, mask2],
+    )
+
+    assert isinstance(db.data, ParquetStreamReader)
+    assert isinstance(db.mask, ParquetStreamReader)
+
+
+def test_db_init_valueerror():
+    with pytest.raises(ValueError):
+        DataBundle(
+            mode="invalid",
+        )
+
+
+def test_db_typerror():
+    class Dummy:
+        pass
+
+    with pytest.raises(TypeError, match="'data' has unsupported type"):
+        DataBundle(data=Dummy())
+
+
+def test_getattr_pd(sample_db_df):
+    db = sample_db_df
+
+    sum_method = db.sum
+    assert isinstance(sum_method, SubscriptableMethod)
+
+    result = sum_method(axis=1)
+
+    expected = pd.Series({0: 19, 1: 27, 2: 29, 3: 44, 4: 95})
+
+    pd.testing.assert_series_equal(result, expected)
+
+    columns = db.columns
+    assert isinstance(columns, pd.Index)
+    assert list(columns) == ["A", "B"]
+
+
+def test_getattr_psr(sample_db_psr):
+    db = sample_db_psr
+
+    sum_method = db.sum
+    assert isinstance(sum_method, SubscriptableMethod)
+
+    result = sum_method(axis=1, process_kwargs={"non_data_output": "acc"}).read()
+
+    expected = pd.Series({0: 19, 1: 27, 2: 29, 3: 44, 4: 95})
+
+    pd.testing.assert_series_equal(result, expected)
+
+    columns = db.columns
+    assert isinstance(columns, pd.Index)
+    assert list(columns) == ["A", "B"]
+
+    assert db.attrs == {}
+
+
+def test_getattr_attributeerror_object(sample_db_df):
+    with pytest.raises(AttributeError, match="DataBundle object has no attribute"):
+        _ = sample_db_df.__magic__
+
+
+def test_getattr_valueerror(sample_db_psr):
+    db = sample_db_psr.copy()
+    db.read()
+
+    with pytest.raises(ValueError, match="Cannot access attribute on empty data stream."):
+        _ = db.some_attr
+
+
+def test_getattr_attributeerror_chunk(sample_db_psr):
+    with pytest.raises(AttributeError, match="DataFrame chunk has no attribute"):
+        _ = sample_db_psr.invalid_attr
+
+
+def test_repr_pd(sample_db_df):
+    assert repr(sample_db_df) == repr(sample_db_df._data)
+
+
+def test_repr_psr(sample_db_psr):
+    assert repr(sample_db_psr) == repr(sample_db_psr._data)
+
+
+def test_setitem_pd(sample_db_df):
+    db = sample_db_df
+
+    db["mode"] = "tables"
+    assert db.mode == "tables"
+
+    db["A"] = pd.Series([10, 20, 30, 40, 50], name="A")
+    pd.testing.assert_series_equal(db._data["A"], pd.Series([10, 20, 30, 40, 50], name="A"))
+
+
+def test_setitem_psr(sample_db_psr):
+    db = sample_db_psr
+
+    db["mode"] = "tables"
+    assert db.mode == "tables"
+
+    with pytest.raises(TypeError, match="'ParquetStreamReader' object does not support item assignment"):
+        db["A"] = ParquetStreamReader([pd.Series([10, 20, 30, 40, 50], name="A")])
+
+
+def test_getitem_pd(sample_db_df):
+    result = sample_db_df["mode"]
+    assert result == sample_db_df.mode
+
+    result = sample_db_df["A"]
+    pd.testing.assert_series_equal(result, sample_db_df["A"])
+
+    with pytest.raises(KeyError):
+        sample_db_df["non_existing_column"]
+
+
+def test_getitem_psr(sample_db_psr):
+    result = sample_db_psr["mode"]
+    assert result == sample_db_psr.mode
+
+    result = sample_db_psr["A"]
+    pd.testing.assert_series_equal(result, sample_db_psr["A"])
+
+    with pytest.raises(KeyError):
+        sample_db_psr["non_existing_column"]
+
+
+def test_return_property(sample_db_df):
+    db = sample_db_df
+
+    assert db.parse_dates == db._parse_dates
+    assert db.encoding == db._encoding
+
+    pd.testing.assert_frame_equal(db.data, db._data)
+    pd.testing.assert_frame_equal(db.mask, db._mask)
+
+
+def test_property_setters(sample_db_df):
+    db = sample_db_df
+
+    mask_df = pd.DataFrame([[True, False], [False, True]], columns=db._data.columns)
+    db.mask = mask_df
+    pd.testing.assert_frame_equal(db._mask, mask_df)
+
+    db.imodel = "new_model"
+    assert db._imodel == "new_model"
+
+    db.mode = "tables"
+    assert db._mode == "tables"
+
+
+def test_columns_setter(sample_db_df):
+    db = sample_db_df
+    new_cols = ["x", "y"]
+    db.columns = new_cols
+    assert db._columns == new_cols
+
+
+def test_pd_getitem(sample_db_df):
+    db = sample_db_df
+
+    a_col = db["A"]
+    pd.testing.assert_series_equal(a_col, pd.Series([19, 26, 27, 41, 91], name="A"))
+
+    df_slice = db._data[["A", "B"]]
+    pd.testing.assert_frame_equal(df_slice, pd.DataFrame({"A": [19, 26, 27, 41, 91], "B": [0, 1, 2, 3, 4]}))
+
+
+def test_psr_getitem(sample_db_psr):
+    db = sample_db_psr
+
+    a_col = db["A"]
+    pd.testing.assert_series_equal(a_col, pd.Series([19, 26, 27, 41, 91], name="A"))
+
+    with pytest.raises(TypeError, match="unhashable type: 'list'"):
+        db._data[["A", "B"]]
+
+
+def test_pd_setitem(sample_db_df):
+    db = sample_db_df
+
+    db["C"] = pd.Series([5, 6, 7, 8, 9], name="C")
+    expected = pd.Series([5, 6, 7, 8, 9], name="C")
+    pd.testing.assert_series_equal(db._data["C"], expected)
+
+    db["A"] = pd.Series([7, 8, 9, 10, 11], name="A")
+    expected = pd.Series([7, 8, 9, 10, 11], name="A")
+    pd.testing.assert_series_equal(db._data["A"], expected)
+
+
+def test_psr_setitem(sample_db_psr):
+    db = sample_db_psr
+
+    with pytest.raises(TypeError, match="'ParquetStreamReader' object does not support item assignment"):
+        db["C"] = pd.Series([5, 6], name="C")
 
 
 def test_len_df(sample_db_df):
@@ -120,6 +348,32 @@ def test_print_psr(sample_db_psr, capsys):
     captured = capsys.readouterr()
 
     assert captured.out.strip() != ""
+
+
+def test_get_return_pd(sample_db_df):
+    db = sample_db_df
+
+    assert db._get_db(True) is db
+
+    copy_db = db._get_db(False)
+    assert copy_db is not db
+
+    assert db._return_db(copy_db, inplace=True) is None
+
+    assert db._return_db(copy_db, inplace=False) is copy_db
+
+
+def test_get_return_psr(sample_db_psr):
+    db = sample_db_psr
+
+    assert db._get_db(True) is db
+
+    copy_db = db._get_db(False)
+    assert copy_db is not db
+
+    assert db._return_db(copy_db, inplace=True) is None
+
+    assert db._return_db(copy_db, inplace=False) is copy_db
 
 
 def test_copy_df(sample_db_df):
@@ -183,6 +437,63 @@ def test_add_psr_both(sample_db_psr):
 
     pd.testing.assert_frame_equal(db_add.data.read(), sample_data.read())
     pd.testing.assert_frame_equal(db_add.mask.read(), sample_mask.read())
+
+
+def test_stack_single(sample_db_df):
+    db1 = sample_db_df
+    db2 = sample_db_df
+
+    stacked_db = db1._stack(other=db2, datasets="data", inplace=False)
+
+    expected_df = pd.concat([db1.data, db2.data], ignore_index=True)
+    pd.testing.assert_frame_equal(stacked_db.data, expected_df)
+
+
+def test_stack_multiple(sample_db_df):
+    db1 = sample_db_df
+    db2 = sample_db_df
+
+    stacked_db = db1._stack(other=[db2], datasets=["data"], inplace=False)
+
+    expected_df = pd.concat([db1.data, db2.data], ignore_index=True)
+    pd.testing.assert_frame_equal(stacked_db.data, expected_df)
+
+
+def test_stack_inplace(sample_db_df):
+    db1 = sample_db_df.copy()
+    db2 = sample_db_df.copy()
+
+    result = db1._stack(other=db2, datasets="data", inplace=True)
+
+    assert result is None
+
+    expected_df = pd.concat(
+        [
+            db2.data,
+            db2.data,
+        ],
+        ignore_index=True,
+    )
+    pd.testing.assert_frame_equal(db1.data, expected_df)
+
+
+def test_stack_missing_dataset(sample_db_df):
+    db1 = sample_db_df
+    db2 = sample_db_df
+
+    result = db1._stack(other=db2, datasets="_mask", inplace=False)
+
+    pd.testing.assert_frame_equal(result.data, db1.data)
+
+
+def test_stack_invalid_iterator(sample_db_df):
+    db1 = sample_db_df
+    db2 = sample_db_df
+
+    db1._data = iter([db1.data])
+
+    with pytest.raises(ValueError, match="Data must be a pd.DataFrame"):
+        db1._stack(other=db2, datasets="data", inplace=False)
 
 
 def test_stack_v_df(sample_db_df):
@@ -251,9 +562,7 @@ def test_select_operators_df(
     reset_index,
     inverse,
 ):
-    result = getattr(sample_db_df, func)(
-        *args, reset_index=reset_index, inverse=inverse
-    )
+    result = getattr(sample_db_df, func)(*args, reset_index=reset_index, inverse=inverse)
 
     data = sample_db_df.data
     mask = sample_db_df.mask
@@ -297,9 +606,7 @@ def test_select_operators_psr(
     reset_index,
     inverse,
 ):
-    result = getattr(sample_db_psr, func)(
-        *args, reset_index=reset_index, inverse=inverse
-    )
+    result = getattr(sample_db_psr, func)(*args, reset_index=reset_index, inverse=inverse)
 
     data = sample_db_psr.data.read()
     mask = sample_db_psr.mask.read()
@@ -343,9 +650,7 @@ def test_split_operators_df(
     reset_index,
     inverse,
 ):
-    result = getattr(sample_db_df, func)(
-        *args, reset_index=reset_index, inverse=inverse
-    )
+    result = getattr(sample_db_df, func)(*args, reset_index=reset_index, inverse=inverse)
 
     data = sample_db_df.data
     mask = sample_db_df.mask
@@ -399,9 +704,7 @@ def test_split_operators_psr(
     reset_index,
     inverse,
 ):
-    result = getattr(sample_db_psr, func)(
-        *args, reset_index=reset_index, inverse=inverse
-    )
+    result = getattr(sample_db_psr, func)(*args, reset_index=reset_index, inverse=inverse)
 
     data = sample_db_psr.data.read()
     mask = sample_db_psr.mask.read()
@@ -699,9 +1002,7 @@ def test_map_model_df():
             ("header", "location_quality"): [2, 0, 0, 0],
         }
     )
-    pd.testing.assert_frame_equal(
-        result.data[expected.columns], expected, check_dtype=False
-    )
+    pd.testing.assert_frame_equal(result.data[expected.columns], expected, check_dtype=False)
 
 
 def test_map_model_psr():
@@ -734,9 +1035,7 @@ def test_map_model_psr():
         }
     )
 
-    pd.testing.assert_frame_equal(
-        result.data.read()[expected.columns], expected, check_dtype=False
-    )
+    pd.testing.assert_frame_equal(result.data.read()[expected.columns], expected, check_dtype=False)
 
 
 def test_duplicate_check_single_index():
